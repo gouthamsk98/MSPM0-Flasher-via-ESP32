@@ -1,4 +1,3 @@
-import { SerialOptions } from "./types";
 export class Transport {
   public slipReaderEnabled = false;
   public leftOver = new Uint8Array(0);
@@ -40,7 +39,7 @@ export class Transport {
    * @param {number} baud Number baud rate for serial connection.
    * @param {typeof import("w3c-web-serial").SerialOptions} serialOptions Serial Options for WebUSB SerialPort class.
    */
-  public async connect(baud = 115200, serialOptions: SerialOptions = {}) {
+  public async connect(baud = 115200) {
     try {
       await this.device.open({
         baudRate: baud,
