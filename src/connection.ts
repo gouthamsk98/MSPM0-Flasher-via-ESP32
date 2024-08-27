@@ -11,21 +11,22 @@ export function connect(element: HTMLButtonElement) {
       connection = false;
       return;
     }
+    element.innerHTML = `Connecting...`;
     navigator.serial
       .requestPort({ filters: filters_serial })
       .then(async (port) => {
         loader = await new MSPLoader(port);
-        console.log(
-          "connected",
-          loader.device,
-          await loader.device.getSignals()
-        );
+        await loader.connect();
         await loader.BSLInit();
         element.innerHTML = `Connected`;
+        connection = true;
       })
       .catch((error) => {
         console.error(error);
+        alert("Error Connecting");
+        loader.disconnect();
         element.innerHTML = `Connect`;
+        connection = false;
       });
   });
 }
@@ -36,7 +37,13 @@ export function erase(element: HTMLButtonElement) {
       return;
     }
     element.innerHTML = `Erasing...`;
-    await loader.erase();
+    try {
+      await loader.erase();
+      alert("Erase Done");
+    } catch (e) {
+      console.log(e);
+      alert("Error Erasing");
+    }
     element.innerHTML = `Erase`;
   });
 }
@@ -51,7 +58,13 @@ export function flash(element: HTMLButtonElement) {
       return;
     }
     element.innerHTML = `Flashing...`;
-    await loader.writeFlash(fileContent);
+    try {
+      await loader.writeFlash(fileContent);
+      alert("Flashing Done");
+    } catch (e) {
+      console.log(e);
+      alert("Error Flashing");
+    }
     element.innerHTML = `Flash`;
   });
 }
