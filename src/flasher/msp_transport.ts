@@ -43,9 +43,9 @@ export class Transport {
     try {
       await this.device.open({
         baudRate: baud,
-        // dataBits: serialOptions?.dataBits,
+        // dataBits: serialOptionzs?.dataBits,
         // stopBits: serialOptions?.stopBits,
-        bufferSize: 512, //serialOptions?.bufferSize,
+        bufferSize: 1024, //serialOptions?.bufferSize,
         // parity: serialOptions?.parity,
         // flowControl: serialOptions?.flowControl,
       });
@@ -146,6 +146,22 @@ export class Transport {
     outData.push(0xc0);
     return new Uint8Array(outData);
   }
+  async writeChunk(data: Uint8Array, chunkSize: number) {
+    let position = 0;
+    if (this.device.writable) {
+      const writer = this.device.writable.getWriter();
+      while (position < data.length) {
+        // Slice the data into chunks
+        const chunk = data.slice(position, position + chunkSize);
+        await writer.write(chunk); // Write each chunk to the serial port
+        console.log("Write chunk", chunk);
+        position += chunkSize;
+      }
+      // writer.close();
+      writer.releaseLock();
+    }
+  }
+
   /**
    * Write binary data to device using the WebSerial device writable stream.
    * @param {Uint8Array} data 8 bit unsigned data array to write to device.

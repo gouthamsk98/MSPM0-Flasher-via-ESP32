@@ -333,7 +333,8 @@ export class MSPLoader extends Transport {
     console.log("writeMemory frame", frame);
     // this.slipReaderEnabled = true;
     await this.write(frame);
-    await this.write(data);
+    await this.writeChunk(data, 64);
+    // await this.write(data);
     // console.log("serial indicator before", await this.device.getSignals());
     // await this.device.setSignals({ break: true });
     // await this.sleep(200);
@@ -417,6 +418,7 @@ export class MSPLoader extends Transport {
     //   191, 252, 210, 112, 71, 211, 231, 112, 71, 1, 32, 112, 71, 0, 191, 254,
     //   231, 254, 231, 0, 0, 0, 0,
     // ]);
+    await this.erase();
     await this.writeMemory(this.flash_start_addr, data);
     const exitFrame = this.frameToSerial(
       this.FOR_WRITE,
