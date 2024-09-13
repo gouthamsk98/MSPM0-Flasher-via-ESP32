@@ -45,7 +45,7 @@ export class Transport {
         baudRate: baud,
         // dataBits: serialOptionzs?.dataBits,
         // stopBits: serialOptions?.stopBits,
-        bufferSize: 1024, //serialOptions?.bufferSize,
+        bufferSize: 1024 * 10, //serialOptions?.bufferSize,
         // parity: serialOptions?.parity,
         // flowControl: serialOptions?.flowControl,
       });
