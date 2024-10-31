@@ -7,6 +7,7 @@ export class MSPLoader extends Transport {
   SETUP = false;
   BSL = false;
   CRC32_POLY = 0xedb88320;
+  _crc32 = 0xffffffff;
   // FUNCTIONS
   START = 0x01;
   ERASE = 0x02;
@@ -213,7 +214,7 @@ export class MSPLoader extends Transport {
    * If the response frame is not received, it prints a debug message.
    */
   async erase(): Promise<void> {
-    if (!this.BSL) throw new Error("Not in BSL mode");
+    if (!this.BSL) await this.BSLInit();
     const frame = this.frameToSerial(
       this.FOR_WRITE,
       this.ERASE,
@@ -228,7 +229,6 @@ export class MSPLoader extends Transport {
       if (frame.length) {
         const serialData = this.dataFromSerial(frame);
         if (!serialData) {
-          debugger;
           await this.sleep(100);
           continue;
         }
@@ -314,7 +314,69 @@ export class MSPLoader extends Transport {
       await this.sleep(1000);
     }
   }
+  crc32(data: Uint8Array): number {
+    /**
+     * Return the crc32 checksum of the firmware image
+     *
+     * Return:
+     *     The firmware's CRC32, ready for comparison with the CRC
+     *     returned by the ROM bootloader's COMMAND_CRC32
+     */
+    this._crc32 = 0xffffffff;
 
+    for (const byte of data) {
+      this._crc32 ^= byte;
+
+      for (let i = 0; i < 8; i++) {
+        const mask = -(this._crc32 & 1);
+        this._crc32 = (this._crc32 >>> 1) ^ (this.CRC32_POLY & mask);
+      }
+    }
+    return this._crc32 >>> 0; // Use >>> 0 to ensure an unsigned 32-bit result
+  }
+
+  async verify(addr: number, length: number, data: Uint8Array): Promise<void> {
+    let crc = this.crc32(data);
+    const tragetData = new Uint8Array([
+      (crc >> 24) & 0xff,
+      (crc >> 8) & 0xff,
+      crc & 0xff,
+      (addr >> 24) & 0xff,
+      (addr >> 16) & 0xff,
+      (addr >> 8) & 0xff,
+      addr & 0xff,
+      (length >> 24) & 0xff,
+      (length >> 16) & 0xff,
+      (length >> 8) & 0xff,
+      length & 0xff,
+    ]);
+    const frame = this.frameToSerial(
+      this.FOR_WRITE,
+      this.VERIFY,
+      tragetData,
+      12
+    );
+    await this.write(frame);
+    while (true) {
+      const frame = await this.readSer(this.MAX_BUFF_LEN);
+      console.log("readMemory frame", frame);
+      if (frame.length) {
+        const serialData = this.dataFromSerial(frame);
+        if (!serialData) {
+          await this.sleep(100);
+          continue;
+        }
+        const [fun, data] = serialData;
+        if (fun === this.ACK && data.includes(this.OK)) {
+          this.mdebug(5, "verification done");
+          await this.startApp();
+          break;
+        } else if (fun === this.ACK && data.includes(this.FAIL))
+          throw new Error("verification Failed");
+      } else this.mdebug(5, "ReadMemory: no data from serial");
+      await this.sleep(100);
+    }
+  }
   async writeMemory(addr: number, data: Uint8Array): Promise<void> {
     if (!this.BSL) throw new Error("Not in BSL mode");
     const length = data.length;
@@ -389,35 +451,8 @@ export class MSPLoader extends Transport {
     return new Uint8Array(data);
   }
   async writeFlash(hex: string) {
-    if (!this.BSL) throw new Error("Not in BSL mode");
+    if (!this.BSL) await this.BSLInit();
     const data = this.intelHexToUint8Array(hex);
-    // console.log("data", data);
-    // const data = new Uint8Array([
-    //   0, 128, 32, 32, 183, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 0, 0, 0, 0, 0,
-    //   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 195,
-    //   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0,
-    //   195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195,
-    //   1, 0, 0, 195, 1, 0, 0, 0, 0, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 0, 0, 0, 0,
-    //   0, 0, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195,
-    //   1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 0, 0, 0,
-    //   0, 0, 0, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 195, 1,
-    //   0, 0, 0, 0, 0, 0, 195, 1, 0, 0, 195, 1, 0, 0, 13, 72, 0, 33, 1, 96, 13,
-    //   72, 1, 31, 10, 104, 3, 35, 219, 67, 19, 64, 11, 96, 65, 104, 1, 34, 145,
-    //   67, 65, 96, 65, 104, 18, 2, 145, 67, 65, 96, 1, 104, 48, 34, 145, 67, 1,
-    //   96, 1, 104, 15, 34, 145, 67, 1, 96, 112, 71, 192, 70, 8, 3, 11, 64, 4, 1,
-    //   11, 64, 10, 77, 11, 76, 1, 32, 134, 5, 0, 240, 72, 248, 40, 70, 16, 56, 6,
-    //   96, 32, 70, 0, 240, 74, 248, 46, 96, 32, 70, 0, 240, 70, 248, 46, 96, 32,
-    //   70, 0, 240, 66, 248, 46, 96, 242, 231, 176, 50, 10, 64, 0, 36, 244, 0,
-    //   128, 181, 6, 72, 6, 73, 65, 96, 6, 74, 81, 96, 6, 73, 1, 96, 17, 96, 16,
-    //   32, 0, 240, 48, 248, 128, 189, 192, 70, 0, 8, 10, 64, 3, 0, 0, 177, 0, 40,
-    //   10, 64, 1, 0, 0, 38, 6, 72, 128, 243, 8, 136, 0, 191, 0, 191, 0, 240, 38,
-    //   248, 0, 32, 255, 247, 198, 255, 1, 32, 0, 240, 34, 248, 192, 70, 0, 128,
-    //   32, 32, 4, 72, 129, 33, 1, 96, 1, 32, 128, 5, 3, 73, 8, 96, 8, 99, 112,
-    //   71, 192, 70, 200, 128, 66, 64, 160, 50, 10, 64, 128, 181, 255, 247, 201,
-    //   255, 255, 247, 237, 255, 255, 247, 139, 255, 128, 189, 129, 30, 9, 31, 0,
-    //   191, 252, 210, 112, 71, 211, 231, 112, 71, 1, 32, 112, 71, 0, 191, 254,
-    //   231, 254, 231, 0, 0, 0, 0,
-    // ]);
     await this.erase();
     await this.writeMemory(this.flash_start_addr, data);
     const exitFrame = this.frameToSerial(
@@ -428,5 +463,10 @@ export class MSPLoader extends Transport {
     );
     console.log("exiting", exitFrame);
     // await this.write(exitFrame);
+  }
+  async verifyFlash(hex: string) {
+    if (!this.BSL) await this.BSLInit();
+    const data = this.intelHexToUint8Array(hex);
+    await this.verify(this.flash_start_addr, data.length, data);
   }
 }

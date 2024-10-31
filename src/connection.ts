@@ -17,7 +17,7 @@ export function connect(element: HTMLButtonElement) {
       .then(async (port) => {
         loader = await new MSPLoader(port);
         await loader.connect();
-        await loader.BSLInit();
+        // await loader.BSLInit();
         element.innerHTML = `Connected`;
         connection = true;
       })
@@ -45,6 +45,26 @@ export function erase(element: HTMLButtonElement) {
       alert("Error Erasing");
     }
     element.innerHTML = `Erase`;
+  });
+}
+export function verify(element: HTMLButtonElement) {
+  element.addEventListener("click", async () => {
+    if (!connection) {
+      alert("Please Connect First");
+      return;
+    }
+    if (!fileContent) {
+      alert("Please upload a .Hex file first");
+      return;
+    }
+    element.innerHTML = `Verifying...`;
+    try {
+      await loader.verifyFlash(fileContent);
+    } catch (e) {
+      console.log(e);
+      alert("Error Verifying");
+    }
+    element.innerHTML = `Verify`;
   });
 }
 export function flash(element: HTMLButtonElement) {
