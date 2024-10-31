@@ -35,6 +35,7 @@ export class MSPLoader extends Transport {
   ) {
     super(port);
   }
+  //@ts-ignore
   static mdebug(level: number, message: string, attr: any = "\n"): void {
     if (MSPLoader.QUIET != 0) {
       const consoleTextarea =
