@@ -9,8 +9,8 @@ import {
 } from "./connection.ts";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-    <h1>Port11 MSPMO Flasher</h1>
-    <h2>Supported only with Chrome Browser</h2>
+    <h1>MSPMO Flasher via ESP</h1>
+    <h4>Supported Browsers: Chrome, Edge</h4>
     <button id="connect" type="button">Connect</button
       <input type="file" id="myfile" name="myfile" accept=".hex">
       <input type="file" id="myfile" name="myfile"><br><br>
@@ -18,6 +18,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       <button id="flash" type="button">Flash</button>
       <button id="verify" type="button">Verify</button>
       <button id="reset" type="button">Reset</button>
+      <textarea id="console" rows="15" cols="50" readonly></textarea>
   </div>
 `;
 connect(document.querySelector<HTMLButtonElement>("#connect")!);

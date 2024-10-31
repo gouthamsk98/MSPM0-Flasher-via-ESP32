@@ -19,11 +19,12 @@ export function connect(element: HTMLButtonElement) {
         await loader.connect();
         // await loader.BSLInit();
         element.innerHTML = `Connected`;
+        MSPLoader.mdebug(1, "Device Connected");
         connection = true;
       })
       .catch((error) => {
         console.error(error);
-        alert("Error Connecting");
+        MSPLoader.mdebug(1, "Error Connecting");
         loader.disconnect();
         element.innerHTML = `Connect`;
         connection = false;
@@ -33,16 +34,15 @@ export function connect(element: HTMLButtonElement) {
 export function erase(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      alert("Please Connect First");
+      MSPLoader.mdebug(1, "Please Connect First");
       return;
     }
     element.innerHTML = `Erasing...`;
     try {
       await loader.erase();
-      alert("Erase Done");
     } catch (e) {
       console.log(e);
-      alert("Error Erasing");
+      MSPLoader.mdebug(1, "Error Erasing");
     }
     element.innerHTML = `Erase`;
   });
@@ -50,11 +50,11 @@ export function erase(element: HTMLButtonElement) {
 export function verify(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      alert("Please Connect First");
+      MSPLoader.mdebug(1, "Please Connect First");
       return;
     }
     if (!fileContent) {
-      alert("Please upload a .Hex file first");
+      MSPLoader.mdebug(1, "Please upload a .Hex file first");
       return;
     }
     element.innerHTML = `Verifying...`;
@@ -62,7 +62,7 @@ export function verify(element: HTMLButtonElement) {
       await loader.verifyFlash(fileContent);
     } catch (e) {
       console.log(e);
-      alert("Error Verifying");
+      MSPLoader.mdebug(1, "Error Verifying");
     }
     element.innerHTML = `Verify`;
   });
@@ -70,20 +70,20 @@ export function verify(element: HTMLButtonElement) {
 export function flash(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      alert("Please Connect First");
+      MSPLoader.mdebug(1, "Please Connect First");
       return;
     }
     if (!fileContent) {
-      alert("Please upload a .Hex file first");
+      MSPLoader.mdebug(1, "Please upload a .Hex file first");
       return;
     }
     element.innerHTML = `Flashing...`;
     try {
       await loader.writeFlash(fileContent);
-      alert("Flashing Done");
+      MSPLoader.mdebug(1, "Flashing Done");
     } catch (e) {
       console.log(e);
-      alert("Error Flashing");
+      MSPLoader.mdebug(1, "Error Flashing");
     }
     element.innerHTML = `Flash`;
   });
@@ -98,19 +98,20 @@ function readFileAsText(file: File): Promise<string> {
 }
 export function readFile(element: HTMLInputElement) {
   element.addEventListener("change", async (event) => {
+    fileContent = "";
     const file = (event.target as HTMLInputElement).files![0];
     if (file && file.name.endsWith(".hex")) {
       fileContent = await readFileAsText(file);
       console.log(fileContent);
     } else {
-      alert("Please upload a valid .hex file");
+      MSPLoader.mdebug(1, "Please upload a valid .hex file");
     }
   });
 }
 export function reset(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      alert("Please Connect First");
+      MSPLoader.mdebug(1, "Please Connect First");
       return;
     }
     element.innerHTML = `Resting...`;

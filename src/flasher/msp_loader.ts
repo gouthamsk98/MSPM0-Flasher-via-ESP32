@@ -1,6 +1,6 @@
 import { Transport } from "./msp_transport";
 export class MSPLoader extends Transport {
-  QUIET = 5;
+  static QUIET = 5;
   // Default Baud
   DEFAULT_BAUD = 115200;
   MAX_BUFF_LEN = 64;
@@ -35,9 +35,12 @@ export class MSPLoader extends Transport {
   ) {
     super(port);
   }
-  mdebug(level: number, message: string, attr: any = "\n"): void {
-    if (this.QUIET >= level) {
-      console.log(message + attr);
+  static mdebug(level: number, message: string, attr: any = "\n"): void {
+    if (MSPLoader.QUIET != 0) {
+      const consoleTextarea =
+        document.querySelector<HTMLTextAreaElement>("#console")!;
+      consoleTextarea.value += message + "\n";
+      consoleTextarea.scrollTop = consoleTextarea.scrollHeight;
     }
   }
   /**
@@ -234,16 +237,16 @@ export class MSPLoader extends Transport {
         }
         const [fun, data] = serialData;
         if (fun === this.ACK && data.includes(this.OK)) {
-          this.mdebug(5, "Erase done");
+          MSPLoader.mdebug(5, "Erase done");
           break;
         } else if (fun === this.ACK && data.includes(this.FAIL))
           throw new Error("Erase Failed");
-      } else this.mdebug(5, "erase: no data from serial");
+      } else MSPLoader.mdebug(5, "erase: no data from serial");
       await this.sleep(100);
     }
   }
   async BSLInit(): Promise<void> {
-    this.mdebug(5, "BSLInit");
+    MSPLoader.mdebug(5, "BSLInit");
     const frame = this.frameToSerial(
       this.FOR_WRITE,
       this.START,
@@ -254,7 +257,7 @@ export class MSPLoader extends Transport {
     await this.write(frame);
     // while (true) {
     //   const frameData = await this.readSer(this.MAX_BUFF_LEN);
-    //   this.mdebug(5, "BSLInit: frame", frameData);
+    //   MSPLoader.mdebug(5, "BSLInit: frame", frameData);
     //   await this.sleep(100);
     // }
     while (!this.BSL) {
@@ -263,18 +266,18 @@ export class MSPLoader extends Transport {
         const serialData = this.dataFromSerial(frame);
         console.log("BSLInit frame", serialData, frame);
         if (!serialData) {
-          this.mdebug(5, "BSLInit: no data from serial", serialData);
+          MSPLoader.mdebug(5, "BSLInit: no data from serial", serialData);
           await this.sleep(100);
           continue;
         }
         const [fun, data] = serialData;
         if (fun === this.ACK && data.includes(this.OK)) {
           this.BSL = true;
-          this.mdebug(5, "Bootloader active");
+          MSPLoader.mdebug(5, "Bootloader active");
           break;
         } else if (fun === this.ACK && data.includes(this.FAIL))
           throw new Error("BSLInit Failed");
-      } else this.mdebug(5, "BSLInit: no data from serial");
+      } else MSPLoader.mdebug(5, "BSLInit: no data from serial");
       await this.sleep(100);
     }
   }
@@ -298,11 +301,11 @@ export class MSPLoader extends Transport {
         }
         const [fun, data] = serialData;
         if (fun === this.ACK && data.includes(this.OK)) {
-          this.mdebug(5, "Start App done");
+          MSPLoader.mdebug(5, "Start App done");
           break;
         } else if (fun === this.ACK && data.includes(this.FAIL))
           throw new Error("Start App Failed");
-      } else this.mdebug(5, "startApp: no data from serial");
+      } else MSPLoader.mdebug(5, "startApp: no data from serial");
       await this.sleep(100);
     }
   }
@@ -368,12 +371,12 @@ export class MSPLoader extends Transport {
         }
         const [fun, data] = serialData;
         if (fun === this.ACK && data.includes(this.OK)) {
-          this.mdebug(5, "verification done");
+          MSPLoader.mdebug(5, "verification done");
           await this.startApp();
           break;
         } else if (fun === this.ACK && data.includes(this.FAIL))
           throw new Error("verification Failed");
-      } else this.mdebug(5, "ReadMemory: no data from serial");
+      } else MSPLoader.mdebug(5, "ReadMemory: no data from serial");
       await this.sleep(100);
     }
   }
@@ -424,12 +427,12 @@ export class MSPLoader extends Transport {
         }
         const [fun, data] = serialData;
         if (fun === this.ACK && data.includes(this.OK)) {
-          this.mdebug(5, "write done");
+          MSPLoader.mdebug(5, "write done");
           await this.startApp();
           break;
         } else if (fun === this.ACK && data.includes(this.FAIL))
           throw new Error("write Failed");
-      } else this.mdebug(5, "ReadMemory: no data from serial");
+      } else MSPLoader.mdebug(5, "ReadMemory: no data from serial");
       await this.sleep(100);
     }
   }
