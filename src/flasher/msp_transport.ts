@@ -1,13 +1,13 @@
 export class Transport {
   public slipReaderEnabled = false;
   public leftOver = new Uint8Array(0);
-  public baudrate = 115200;
+  public baudrate = 9600;
   private traceLog = "";
   private lastTraceTime = Date.now();
   private reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 
   constructor(
-    public device: any, //SerialPort change latter
+    public device: SerialPort, //SerialPort change latter
     public tracing = true,
     enableSlipReader = false
   ) {

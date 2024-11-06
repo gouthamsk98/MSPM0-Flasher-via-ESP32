@@ -1,8 +1,16 @@
 import { MSPLoader } from "./flasher/msp_loader";
+import { MSPLoaderV2 } from "./flasherV2/loader_handler";
 let connection = false;
 let loader: MSPLoader;
+let loaderv2: MSPLoaderV2;
 let fileContent: string;
-const filters_serial = [{ usbVendorId: 0x303a, usbProductId: 0x1001 }];
+const filters_serial = [
+  { usbVendorId: 0x303a, usbProductId: 0x1001 },
+  {
+    usbVendorId: 0xb1b0,
+    usbProductId: 0x8055,
+  },
+];
 export function connect(element: HTMLButtonElement) {
   element.addEventListener("click", () => {
     if (connection && loader) {
@@ -15,11 +23,12 @@ export function connect(element: HTMLButtonElement) {
     navigator.serial
       .requestPort({ filters: filters_serial })
       .then(async (port) => {
-        loader = await new MSPLoader(port);
-        await loader.connect();
+        // loader = await new MSPLoader(port);
+        // await loader.connect();
+        loaderv2 = await new MSPLoaderV2(port);
+        await loaderv2.connect();
         // await loader.BSLInit();
         element.innerHTML = `Connected`;
-        MSPLoader.mdebug(1, "Device Connected");
         connection = true;
       })
       .catch((error) => {
@@ -117,5 +126,21 @@ export function reset(element: HTMLButtonElement) {
     element.innerHTML = `Resting...`;
     await loader.startApp();
     element.innerHTML = `Reset`;
+  });
+}
+export function test(element: HTMLButtonElement) {
+  element.addEventListener("click", async () => {
+    if (!connection) {
+      loaderv2.debug("Please Connect First");
+      return;
+    }
+    element.innerHTML = `Testing...`;
+    try {
+      await loaderv2.establish_conn();
+    } catch (e) {
+      console.log(e);
+      loaderv2.debug("Error Testing");
+    }
+    element.innerHTML = `Test`;
   });
 }

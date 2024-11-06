@@ -283,7 +283,7 @@ export class MSPLoader extends Transport {
     }
   }
   async startApp(): Promise<void> {
-    if (!this.BSL) throw new Error("Not in BSL mode");
+    // if (!this.BSL) throw new Error("Not in BSL mode");
     const frame = this.frameToSerial(
       this.FOR_WRITE,
       this.START_APP,
