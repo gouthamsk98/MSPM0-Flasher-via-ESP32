@@ -41,6 +41,7 @@ export class MSPLoaderV2 extends SerialTransport {
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
       this.debug("BSL Mode Enabled");
+      this.get_device_info();
       this.conn_established = true;
     } else {
       this.debug("BSL Mode Enable Failed", res.response);
@@ -48,8 +49,23 @@ export class MSPLoaderV2 extends SerialTransport {
       throw new Error("BSL Mode Enable Failed");
     }
   }
+  async get_device_info() {
+    if (!this.conn_established) this.establish_conn();
+    let cmd: Command = { type: "GetDeviceInfo" };
+    let send = await Protocol.getFrameRaw(cmd);
+    await this.send(send);
+    let resRaw = await this.receive();
+    // let res = Protocol.getResponse(resRaw, cmd);
+    // if (res.response == BSLResponse.BSL_ACK) {
+    //   console.log("Device Info", res);
+    // } else {
+    //   this.debug("Device Info Failed", res.response);
+    // }
+  }
+
   async mass_earse() {
     if (!this.conn_established) this.establish_conn();
+    this.debug("Mass Erasing ...");
     let cmd: Command = { type: "MassErase" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
@@ -60,6 +76,10 @@ export class MSPLoaderV2 extends SerialTransport {
     } else {
       this.debug("Mass Erase Failed", res.response);
     }
+  }
+  async program_data(hex: string) {
+    if (!this.conn_established) this.establish_conn();
+    const flash_data = this.intelHexToUint8Array(hex);
   }
   async start_app() {
     if (!this.conn_established) this.establish_conn();

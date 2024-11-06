@@ -94,6 +94,23 @@ export class SerialTransport {
       writer.releaseLock();
     }
   }
+  intelHexToUint8Array(hexString: string) {
+    const lines = hexString.trim().split("\n");
+    const data: Array<number> = [];
+    lines.forEach((line) => {
+      if (line.startsWith(":")) {
+        const byteCount = parseInt(line.substr(1, 2), 16);
+        const dataStartIndex = 9; // Data starts after 9 characters (: + 2-byte count + 4-byte address + 2-byte record type)
+        const dataEndIndex = dataStartIndex + byteCount * 2;
+
+        for (let i = dataStartIndex; i < dataEndIndex; i += 2) {
+          data.push(parseInt(line.substr(i, 2), 16));
+        }
+      }
+    });
+
+    return new Uint8Array(data);
+  }
   async receive(timeout = 0) {
     if (this.leftOver.length != 0) {
       const p = this.leftOver;

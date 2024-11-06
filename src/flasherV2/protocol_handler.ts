@@ -116,6 +116,8 @@ export class Protocol {
       case "StartApp":
       case "MassErase":
         return { type: command.type, response: data[0] };
+      case "GetDeviceInfo":
+
       default:
         throw new Error("Unimplemented command");
     }
