@@ -56,10 +56,9 @@ export class MSPLoaderV2 extends SerialTransport {
     let cmd: Command = { type: "GetDeviceInfo" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
-    let resRaw = await this.receive();
-    const slipReaderResult = this.slipReader(resRaw);
-    console.log("silpReaderResult", slipReaderResult);
-    let res: CommandResponse = Protocol.getResponse(slipReaderResult, cmd);
+    let resSlip = await this.read();
+    console.log("Raw Read bytes", resSlip);
+    let res: CommandResponse = Protocol.getResponse(resSlip, cmd);
     if (res.response == BSLResponse.BSL_ACK && res.type == "GetDeviceInfo") {
       this.FLASH_MAX_BUFFER_SIZE = res.BSL_max_buffer_size;
       this.FLASH_START_ADDRESS = res.BSL_buffer_start_address;
@@ -95,7 +94,23 @@ export class MSPLoaderV2 extends SerialTransport {
   }
   async program_data(hex: string) {
     if (!this.conn_established) this.establish_conn();
-    const flash_data = this.intelHexToUint8Array(hex);
+    const raw = this.intelHexToUint8Array(hex);
+    let address=this.FLASH_START_ADDRESS
+    for (let i = 0; i < raw.length; i += this.FLASH_MAX_BUFFER_SIZE) {
+      let data = raw.slice(i, i + this.FLASH_MAX_BUFFER_SIZE);
+      let cmd: Command = { type: "ProgramData",start_address:address ,data: data };
+      let send = await Protocol.getFrameRaw(cmd);
+      await this.send(send);
+      let resRaw = await this.receive();
+      let res = Protocol.getResponse(resRaw, cmd);
+      if (res.response == BSLResponse.BSL_ACK) {
+        this.debug("Data Programmed");
+      } else {
+        this.debug("Data Program Failed", res.response);
+        break;
+      }
+      address+=data.length
+    }
   }
   async start_app() {
     if (!this.conn_established) this.establish_conn();

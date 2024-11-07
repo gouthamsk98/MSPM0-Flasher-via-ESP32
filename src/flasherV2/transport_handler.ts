@@ -6,9 +6,88 @@ export class SerialTransport {
   public tracing = true;
   private leftOver = new Uint8Array(0);
   private reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  slipReaderEnabled = true;
   constructor(public device: SerialPort) {
     console.log("SerialTransport intialized");
   }
+  /**
+   * Concatenate buffer2 to buffer1 and return the resulting ArrayBuffer.
+   * @param {ArrayBuffer} buffer1 First buffer to concatenate.
+   * @param {ArrayBuffer} buffer2 Second buffer to concatenate.
+   * @returns {ArrayBuffer} Result Array buffer.
+   */
+  _appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer) {
+    const tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+    tmp.set(new Uint8Array(buffer1), 0);
+    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+    return tmp.buffer;
+  }
+    /**
+   * Read from serial device using the device ReadableStream.
+   * @param {number} timeout Read timeout number
+   * @param {number} minData Minimum packet array length
+   * @returns {Uint8Array} 8 bit unsigned data array read from device.
+   */
+    async read(timeout = 0, minData = 12) {
+      let t;
+      let packet = this.leftOver;
+      this.leftOver = new Uint8Array(0);
+      if (this.slipReaderEnabled) {
+        const valFinal = this.slipReader(packet);
+        if (valFinal.length > 0) {
+          return valFinal;
+        }
+        packet = this.leftOver;
+        this.leftOver = new Uint8Array(0);
+      }
+      if (this.device.readable == null) return this.leftOver;
+      this.reader = this.device.readable.getReader();
+      try {
+        if (timeout > 0) {
+          t = setTimeout(() => {
+            if (this.reader) {
+              this.reader.cancel();
+            }
+          }, timeout);
+        }
+        do {
+          if (!this.reader) throw new Error("Reader is undefined");
+          const { value, done } = await this.reader.read();
+          if (done) {
+            this.leftOver = packet;
+            console.log("Timeout");
+          }
+          if (!value) break;
+          const p = new Uint8Array(
+            this._appendBuffer(packet.buffer, value.buffer)
+          );
+          packet = p;
+        } while (packet.length < minData);
+      } finally {
+        if (timeout > 0) clearTimeout(t);
+        if (!this.reader) throw new Error("Reader is undefined");
+        this.reader.releaseLock();
+      }
+  
+      if (this.tracing) {
+        console.log("Read bytes");
+        this.trace(`Read ${packet.length} bytes: ${this.hexConvert(packet)}`);
+      }
+  
+      if (this.slipReaderEnabled) {
+        const slipReaderResult = this.slipReader(packet);
+        if (this.tracing) {
+          console.log("Slip reader results");
+          this.trace(
+            `Read ${slipReaderResult.length} bytes: ${this.hexConvert(
+              slipReaderResult
+            )}`
+          );
+        }
+        return slipReaderResult;
+      }
+      return packet;
+    }
   /**
    * Take a data array and return the first well formed packet after
    * replacing the escape sequence. Reads at least 8 bytes.
