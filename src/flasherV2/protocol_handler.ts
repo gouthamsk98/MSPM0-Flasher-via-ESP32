@@ -19,7 +19,18 @@ export type CommandResponse =
   | { type: "ProgramDataFast"; response: BSLResponse }
   | { type: "MemoryRead"; response: BSLResponse; data: Uint8Array }
   | { type: "FactoryReset"; response: BSLResponse }
-  | { type: "GetDeviceInfo"; response: BSLResponse; data: Uint8Array }
+  | {
+      type: "GetDeviceInfo";
+      response: BSLResponse;
+      CMD_interpreter_version: number;
+      build_id: number;
+      app_version: number;
+      active_plugin_interface_version: number;
+      BSL_max_buffer_size: number;
+      BSL_buffer_start_address: number;
+      BCR_config_id: number;
+      BSL_config_id: number;
+    }
   | { type: "StandaloneVerify"; response: BSLResponse }
   | { type: "StartApp"; response: BSLResponse };
 
@@ -53,6 +64,8 @@ export class Protocol {
   //CRC32 Polynomial
   static CRC32_POLYNOMIAL = 0xedb88320;
   static INITIAL_SEED = 0xffffffff;
+  //offset
+  static OFFSET_BYTE = 4;
 
   static softwareCRC(data: Uint8Array, length: number): Uint8Array {
     let crc = 0xffffffff;
@@ -117,7 +130,38 @@ export class Protocol {
       case "MassErase":
         return { type: command.type, response: data[0] };
       case "GetDeviceInfo":
-
+        return {
+          type: command.type,
+          response: data[0],
+          CMD_interpreter_version:
+            data[this.OFFSET_BYTE + 2] << 8 || data[this.OFFSET_BYTE + 1],
+          build_id:
+            data[this.OFFSET_BYTE + 4] << 8 || data[this.OFFSET_BYTE + 3],
+          app_version:
+            data[this.OFFSET_BYTE + 8] << 24 ||
+            data[this.OFFSET_BYTE + 7] << 16 ||
+            data[this.OFFSET_BYTE + 6] << 8 ||
+            data[this.OFFSET_BYTE + 5],
+          active_plugin_interface_version:
+            data[this.OFFSET_BYTE + 10] << 8 || data[this.OFFSET_BYTE + 9],
+          BSL_max_buffer_size:
+            data[this.OFFSET_BYTE + 12] << 8 || data[this.OFFSET_BYTE + 11],
+          BSL_buffer_start_address:
+            data[this.OFFSET_BYTE + 16] << 24 ||
+            data[this.OFFSET_BYTE + 15] << 16 ||
+            data[this.OFFSET_BYTE + 14] << 8 ||
+            data[this.OFFSET_BYTE + 13],
+          BCR_config_id:
+            data[this.OFFSET_BYTE + 20] << 24 ||
+            data[this.OFFSET_BYTE + 19] << 16 ||
+            data[this.OFFSET_BYTE + 18] << 8 ||
+            data[this.OFFSET_BYTE + 17],
+          BSL_config_id:
+            data[this.OFFSET_BYTE + 24] << 24 ||
+            data[this.OFFSET_BYTE + 23] << 16 ||
+            data[this.OFFSET_BYTE + 22] << 8 ||
+            data[this.OFFSET_BYTE + 21],
+        };
       default:
         throw new Error("Unimplemented command");
     }

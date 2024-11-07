@@ -10,6 +10,46 @@ export class SerialTransport {
     console.log("SerialTransport intialized");
   }
   /**
+   * Take a data array and return the first well formed packet after
+   * replacing the escape sequence. Reads at least 8 bytes.
+   * @param {Uint8Array} data Unsigned 8 bit array from the device read stream.
+   * @returns {Uint8Array} Formatted packet using SLIP escape sequences.
+   */
+  slipReader(data: Uint8Array): Uint8Array {
+    const SLIP_END = 0xc0;
+    const SLIP_ESC = 0xdb;
+    const SLIP_ESC_END = 0xdc;
+    const SLIP_ESC_ESC = 0xdd;
+
+    let buffer: number[] = [];
+    let isEscaped = false;
+
+    for (const byte of data) {
+      if (byte === SLIP_END) {
+        // End of packet marker found
+        continue; // Skip the SLIP_END byte
+      } else if (byte === SLIP_ESC) {
+        // Escape character detected
+        isEscaped = true;
+      } else {
+        if (isEscaped) {
+          // Substitute escaped sequences
+          if (byte === SLIP_ESC_END) {
+            buffer.push(SLIP_END);
+          } else if (byte === SLIP_ESC_ESC) {
+            buffer.push(SLIP_ESC);
+          }
+          isEscaped = false;
+        } else {
+          buffer.push(byte);
+        }
+      }
+    }
+
+    // Create a Uint8Array from the concatenated buffer
+    return new Uint8Array(buffer);
+  }
+  /**
    * Format received or sent data for tracing output.
    * @param {string} message Message to format as trace line.
    */

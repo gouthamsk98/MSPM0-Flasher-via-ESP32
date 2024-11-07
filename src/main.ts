@@ -10,7 +10,7 @@ import {
 } from "./connection.ts";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-    <h1>MSPMO Flasher via ESP</h1>
+    <h1>MSPMO Flasher via UART</h1>
     <h4>Supported Browsers: Chrome, Edge</h4>
     <button id="connect" type="button">Connect</button
     <input type="file" id="myfile" name="myfile" accept=".hex">

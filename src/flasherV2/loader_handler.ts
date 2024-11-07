@@ -1,6 +1,6 @@
 import { SerialTransport } from "./transport_handler";
 import { Protocol, BSLResponse } from "./protocol_handler";
-import { Command } from "./protocol_handler";
+import { Command, CommandResponse } from "./protocol_handler";
 export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
   //  MSPM0 Flasher
@@ -19,6 +19,8 @@ export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
   conn_established = false;
   BSL_CMD = [0x42, 0x53, 0x4c]; //BSL
+  FLASH_START_ADDRESS = 0x0000;
+  FLASH_MAX_BUFFER_SIZE = 0x0000;
   constructor(device: SerialPort) {
     super(device);
   }
@@ -40,9 +42,9 @@ export class MSPLoaderV2 extends SerialTransport {
     let resRaw = await this.receive();
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
+      this.conn_established = true;
       this.debug("BSL Mode Enabled");
       this.get_device_info();
-      this.conn_established = true;
     } else {
       this.debug("BSL Mode Enable Failed", res.response);
       this.conn_established = false;
@@ -55,12 +57,26 @@ export class MSPLoaderV2 extends SerialTransport {
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
     let resRaw = await this.receive();
-    // let res = Protocol.getResponse(resRaw, cmd);
-    // if (res.response == BSLResponse.BSL_ACK) {
-    //   console.log("Device Info", res);
-    // } else {
-    //   this.debug("Device Info Failed", res.response);
-    // }
+    const slipReaderResult = this.slipReader(resRaw);
+    console.log("silpReaderResult", slipReaderResult);
+    let res: CommandResponse = Protocol.getResponse(slipReaderResult, cmd);
+    if (res.response == BSLResponse.BSL_ACK && res.type == "GetDeviceInfo") {
+      this.FLASH_MAX_BUFFER_SIZE = res.BSL_max_buffer_size;
+      this.FLASH_START_ADDRESS = res.BSL_buffer_start_address;
+      this.debug(`Device Info:
+        CMD_interpreter_version: 0x${res.CMD_interpreter_version.toString(16)}
+        build_id: 0x${res.build_id.toString(16)}
+        app_version: 0x${res.app_version.toString(16)}
+        active_plugin_interface_version: 0x${res.active_plugin_interface_version.toString(
+          16
+        )}
+        BSL_max_buffer_size: 0x${res.BSL_max_buffer_size.toString(16)}
+        BSL_buffer_start_address: 0x${res.BSL_buffer_start_address.toString(16)}
+        BCR_config_id: 0x${res.BCR_config_id.toString(16)}
+        BSL_config_id: 0x${res.BSL_config_id.toString(16)}`);
+    } else {
+      this.debug("Device Info Failed", res.response);
+    }
   }
 
   async mass_earse() {
