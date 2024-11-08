@@ -6,7 +6,7 @@ import {
   readFile,
   reset,
   verify,
-  test,
+  getDeviceInfo,
 } from "./connection.ts";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
@@ -15,7 +15,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <button id="connect" type="button">Connect</button
     <input type="file" id="myfile" name="myfile" accept=".hex">
     <input type="file" id="myfile" name="myfile"><br><br>
-    <button id="test" type="button">Test</button>
+    <button id="getDeviceInfo" type="button">Get Device Info</button>
     <button id="erase" type="button">Erase</button>
       <button id="flash" type="button">Flash</button>
       <button id="verify" type="button">Verify</button>
@@ -24,7 +24,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 `;
 connect(document.querySelector<HTMLButtonElement>("#connect")!);
-test(document.querySelector<HTMLButtonElement>("#test")!);
+getDeviceInfo(document.querySelector<HTMLButtonElement>("#getDeviceInfo")!);
 erase(document.querySelector<HTMLButtonElement>("#erase")!);
 flash(document.querySelector<HTMLButtonElement>("#flash")!);
 readFile(document.querySelector<HTMLInputElement>("#myfile")!);

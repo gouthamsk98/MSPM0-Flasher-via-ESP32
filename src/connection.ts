@@ -23,11 +23,8 @@ export function connect(element: HTMLButtonElement) {
     navigator.serial
       .requestPort({ filters: filters_serial })
       .then(async (port) => {
-        // loader = await new MSPLoader(port);
-        // await loader.connect();
         loaderv2 = await new MSPLoaderV2(port);
         await loaderv2.connect();
-        // await loader.BSLInit();
         element.innerHTML = `Connected`;
         connection = true;
       })
@@ -43,17 +40,37 @@ export function connect(element: HTMLButtonElement) {
 export function erase(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      MSPLoader.mdebug(1, "Please Connect First");
+      loaderv2.debug("Please Connect First");
       return;
     }
     element.innerHTML = `Erasing...`;
     try {
-      await loader.erase();
+      await loaderv2.mass_earse();
     } catch (e) {
       console.log(e);
       MSPLoader.mdebug(1, "Error Erasing");
     }
     element.innerHTML = `Erase`;
+  });
+}
+export function flash(element: HTMLButtonElement) {
+  element.addEventListener("click", async () => {
+    if (!connection) {
+      loaderv2.debug("Please Connect First");
+      return;
+    }
+    if (!fileContent) {
+      loaderv2.debug(1, "Please upload a .Hex file first");
+      return;
+    }
+    element.innerHTML = `Flashing...`;
+    try {
+      await loaderv2.program_data(fileContent);
+      loaderv2.debug("Flashing Done");
+    } catch (e) {
+      loaderv2.debug("Error Flashing");
+    }
+    element.innerHTML = `Flash`;
   });
 }
 export function verify(element: HTMLButtonElement) {
@@ -74,27 +91,6 @@ export function verify(element: HTMLButtonElement) {
       MSPLoader.mdebug(1, "Error Verifying");
     }
     element.innerHTML = `Verify`;
-  });
-}
-export function flash(element: HTMLButtonElement) {
-  element.addEventListener("click", async () => {
-    if (!connection) {
-      MSPLoader.mdebug(1, "Please Connect First");
-      return;
-    }
-    if (!fileContent) {
-      MSPLoader.mdebug(1, "Please upload a .Hex file first");
-      return;
-    }
-    element.innerHTML = `Flashing...`;
-    try {
-      await loader.writeFlash(fileContent);
-      MSPLoader.mdebug(1, "Flashing Done");
-    } catch (e) {
-      console.log(e);
-      MSPLoader.mdebug(1, "Error Flashing");
-    }
-    element.innerHTML = `Flash`;
   });
 }
 function readFileAsText(file: File): Promise<string> {
@@ -120,27 +116,27 @@ export function readFile(element: HTMLInputElement) {
 export function reset(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      MSPLoader.mdebug(1, "Please Connect First");
+      loaderv2.debug(1, "Please Connect First");
       return;
     }
     element.innerHTML = `Resting...`;
-    await loader.startApp();
+    await loaderv2.start_app();
     element.innerHTML = `Reset`;
   });
 }
-export function test(element: HTMLButtonElement) {
+export function getDeviceInfo(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
       loaderv2.debug("Please Connect First");
       return;
     }
-    element.innerHTML = `Testing...`;
+    element.innerHTML = `Getting Device Info...`;
     try {
       await loaderv2.establish_conn();
     } catch (e) {
       console.log(e);
-      loaderv2.debug("Error Testing");
+      loaderv2.debug("Error Getting Device Info");
     }
-    element.innerHTML = `Test`;
+    element.innerHTML = `Get Device Info`;
   });
 }

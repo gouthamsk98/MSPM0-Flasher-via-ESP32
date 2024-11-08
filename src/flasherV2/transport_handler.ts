@@ -22,72 +22,72 @@ export class SerialTransport {
     tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
     return tmp.buffer;
   }
-    /**
+  /**
    * Read from serial device using the device ReadableStream.
    * @param {number} timeout Read timeout number
    * @param {number} minData Minimum packet array length
    * @returns {Uint8Array} 8 bit unsigned data array read from device.
    */
-    async read(timeout = 0, minData = 12) {
-      let t;
-      let packet = this.leftOver;
+  async read(timeout = 0, minData = 12) {
+    let t;
+    let packet = this.leftOver;
+    this.leftOver = new Uint8Array(0);
+    if (this.slipReaderEnabled) {
+      const valFinal = this.slipReader(packet);
+      if (valFinal.length > 0) {
+        return valFinal;
+      }
+      packet = this.leftOver;
       this.leftOver = new Uint8Array(0);
-      if (this.slipReaderEnabled) {
-        const valFinal = this.slipReader(packet);
-        if (valFinal.length > 0) {
-          return valFinal;
-        }
-        packet = this.leftOver;
-        this.leftOver = new Uint8Array(0);
-      }
-      if (this.device.readable == null) return this.leftOver;
-      this.reader = this.device.readable.getReader();
-      try {
-        if (timeout > 0) {
-          t = setTimeout(() => {
-            if (this.reader) {
-              this.reader.cancel();
-            }
-          }, timeout);
-        }
-        do {
-          if (!this.reader) throw new Error("Reader is undefined");
-          const { value, done } = await this.reader.read();
-          if (done) {
-            this.leftOver = packet;
-            console.log("Timeout");
-          }
-          if (!value) break;
-          const p = new Uint8Array(
-            this._appendBuffer(packet.buffer, value.buffer)
-          );
-          packet = p;
-        } while (packet.length < minData);
-      } finally {
-        if (timeout > 0) clearTimeout(t);
-        if (!this.reader) throw new Error("Reader is undefined");
-        this.reader.releaseLock();
-      }
-  
-      if (this.tracing) {
-        console.log("Read bytes");
-        this.trace(`Read ${packet.length} bytes: ${this.hexConvert(packet)}`);
-      }
-  
-      if (this.slipReaderEnabled) {
-        const slipReaderResult = this.slipReader(packet);
-        if (this.tracing) {
-          console.log("Slip reader results");
-          this.trace(
-            `Read ${slipReaderResult.length} bytes: ${this.hexConvert(
-              slipReaderResult
-            )}`
-          );
-        }
-        return slipReaderResult;
-      }
-      return packet;
     }
+    if (this.device.readable == null) return this.leftOver;
+    this.reader = this.device.readable.getReader();
+    try {
+      if (timeout > 0) {
+        t = setTimeout(() => {
+          if (this.reader) {
+            this.reader.cancel();
+          }
+        }, timeout);
+      }
+      do {
+        if (!this.reader) throw new Error("Reader is undefined");
+        const { value, done } = await this.reader.read();
+        if (done) {
+          this.leftOver = packet;
+          console.log("Timeout");
+        }
+        if (!value) break;
+        const p = new Uint8Array(
+          this._appendBuffer(packet.buffer, value.buffer)
+        );
+        packet = p;
+      } while (packet.length < minData);
+    } finally {
+      if (timeout > 0) clearTimeout(t);
+      if (!this.reader) throw new Error("Reader is undefined");
+      this.reader.releaseLock();
+    }
+
+    if (this.tracing) {
+      console.log("Read bytes");
+      this.trace(`Read ${packet.length} bytes: ${this.hexConvert(packet)}`);
+    }
+
+    if (this.slipReaderEnabled) {
+      const slipReaderResult = this.slipReader(packet);
+      if (this.tracing) {
+        console.log("Slip reader results");
+        this.trace(
+          `Read ${slipReaderResult.length} bytes: ${this.hexConvert(
+            slipReaderResult
+          )}`
+        );
+      }
+      return slipReaderResult;
+    }
+    return packet;
+  }
   /**
    * Take a data array and return the first well formed packet after
    * replacing the escape sequence. Reads at least 8 bytes.
@@ -95,7 +95,7 @@ export class SerialTransport {
    * @returns {Uint8Array} Formatted packet using SLIP escape sequences.
    */
   slipReader(data: Uint8Array): Uint8Array {
-    const SLIP_END = 0xc0;
+    const SLIP_END = 0x3e60;
     const SLIP_ESC = 0xdb;
     const SLIP_ESC_END = 0xdc;
     const SLIP_ESC_ESC = 0xdd;

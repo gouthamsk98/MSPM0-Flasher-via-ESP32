@@ -139,7 +139,7 @@ export class Protocol {
         );
         return new Uint8Array([
           this.HEADER,
-          length >>8,
+          length >> 8,
           length & 0xff,
           this.PROGRAM_DATA,
           start_address,
@@ -163,32 +163,32 @@ export class Protocol {
           type: command.type,
           response: data[0],
           CMD_interpreter_version:
-            data[this.OFFSET_BYTE + 2] << 8 | data[this.OFFSET_BYTE + 1],
+            (data[this.OFFSET_BYTE + 2] << 8) | data[this.OFFSET_BYTE + 1],
           build_id:
-            data[this.OFFSET_BYTE + 4] << 8 | data[this.OFFSET_BYTE + 3],
+            (data[this.OFFSET_BYTE + 4] << 8) | data[this.OFFSET_BYTE + 3],
           app_version:
-            data[this.OFFSET_BYTE + 8] << 24 |
-            data[this.OFFSET_BYTE + 7] << 16 |
-            data[this.OFFSET_BYTE + 6] << 8 |
+            (data[this.OFFSET_BYTE + 8] << 24) |
+            (data[this.OFFSET_BYTE + 7] << 16) |
+            (data[this.OFFSET_BYTE + 6] << 8) |
             data[this.OFFSET_BYTE + 5],
           active_plugin_interface_version:
-            data[this.OFFSET_BYTE + 10] << 8 | data[this.OFFSET_BYTE + 9],
+            (data[this.OFFSET_BYTE + 10] << 8) | data[this.OFFSET_BYTE + 9],
           BSL_max_buffer_size:
-            data[this.OFFSET_BYTE + 12] << 8 | data[this.OFFSET_BYTE + 11],
+            (data[this.OFFSET_BYTE + 12] << 8) | data[this.OFFSET_BYTE + 11],
           BSL_buffer_start_address:
-            data[this.OFFSET_BYTE + 16] << 24 |
-            data[this.OFFSET_BYTE + 15] << 16 |
-            data[this.OFFSET_BYTE + 14] << 8 |
+            (data[this.OFFSET_BYTE + 16] << 24) |
+            (data[this.OFFSET_BYTE + 15] << 16) |
+            (data[this.OFFSET_BYTE + 14] << 8) |
             data[this.OFFSET_BYTE + 13],
           BCR_config_id:
-            data[this.OFFSET_BYTE + 20] << 24 |
-            data[this.OFFSET_BYTE + 19] << 16 |
-            data[this.OFFSET_BYTE + 18] << 8 |
+            (data[this.OFFSET_BYTE + 20] << 24) |
+            (data[this.OFFSET_BYTE + 19] << 16) |
+            (data[this.OFFSET_BYTE + 18] << 8) |
             data[this.OFFSET_BYTE + 17],
           BSL_config_id:
-            data[this.OFFSET_BYTE + 24] << 24 |
-            data[this.OFFSET_BYTE + 23] << 16 |
-            data[this.OFFSET_BYTE + 22] << 8 |
+            (data[this.OFFSET_BYTE + 24] << 24) |
+            (data[this.OFFSET_BYTE + 23] << 16) |
+            (data[this.OFFSET_BYTE + 22] << 8) |
             data[this.OFFSET_BYTE + 21],
         };
       default:

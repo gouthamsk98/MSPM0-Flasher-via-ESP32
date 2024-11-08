@@ -17,10 +17,22 @@ export class MSPLoaderV2 extends SerialTransport {
   // This code is licensed under the MIT License.
   // You may obtain a copy of the License at https://opensource.org/licenses/MIT
   //***************************************************************************************
+
   conn_established = false;
   BSL_CMD = [0x42, 0x53, 0x4c]; //BSL
   FLASH_START_ADDRESS = 0x0000;
   FLASH_MAX_BUFFER_SIZE = 0x0000;
+
+  //******************************* BSL Core MessageFrame Format**************************
+  // |Header|Length|RSP|MSG Data|CRC32|
+  // |1 Byte|2 Byte|1 Byte|N Byte|4 Byte|
+  //********************************BSL Core Response**************************************
+  MEMORY_READ_RESPONSE = 0x30;
+  DEVICE_INFO_RESPONSE = 0x31;
+  STANDALONE_VERIFY_RESPONSE = 0x32;
+  MESSAGE_RESPONSE = 0x3b;
+  ERROR_RESPONSE = 0x3a;
+  //***************************************************************************************
   constructor(device: SerialPort) {
     super(device);
   }
@@ -51,13 +63,32 @@ export class MSPLoaderV2 extends SerialTransport {
       throw new Error("BSL Mode Enable Failed");
     }
   }
+  check_crc(frame: Uint8Array): boolean {
+    const data_length = (frame[3] << 8) | frame[2];
+    const data = frame.slice(4, 3 + data_length);
+    const crc = Protocol.softwareCRC(data, data_length);
+    // check if crc and last 4 bytes of frame are same
+    const check_crc_value =
+      (crc[0] << 24) | (crc[1] << 16) | (crc[2] << 8) | crc[3];
+    const frame_crc_value =
+      (frame[frame.length - 4] << 24) |
+      (frame[frame.length - 3] << 16) |
+      (frame[frame.length - 2] << 8) |
+      frame[frame.length - 1];
+    if (check_crc_value != frame_crc_value) {
+      this.debug("CRC Check Failed");
+      throw new Error("CRC Check Failed");
+    }
+    return true;
+  }
   async get_device_info() {
     if (!this.conn_established) this.establish_conn();
-    let cmd: Command = { type: "GetDeviceInfo" };
-    let send = await Protocol.getFrameRaw(cmd);
+    const cmd: Command = { type: "GetDeviceInfo" };
+    const send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
-    let resSlip = await this.read();
-    console.log("Raw Read bytes", resSlip);
+    const resRaw = await this.receive();
+    const resSlip = this.slipReader(resRaw);
+    this.check_crc(resSlip);
     let res: CommandResponse = Protocol.getResponse(resSlip, cmd);
     if (res.response == BSLResponse.BSL_ACK && res.type == "GetDeviceInfo") {
       this.FLASH_MAX_BUFFER_SIZE = res.BSL_max_buffer_size;
@@ -95,10 +126,15 @@ export class MSPLoaderV2 extends SerialTransport {
   async program_data(hex: string) {
     if (!this.conn_established) this.establish_conn();
     const raw = this.intelHexToUint8Array(hex);
-    let address=this.FLASH_START_ADDRESS
-    for (let i = 0; i < raw.length; i += this.FLASH_MAX_BUFFER_SIZE) {
-      let data = raw.slice(i, i + this.FLASH_MAX_BUFFER_SIZE);
-      let cmd: Command = { type: "ProgramData",start_address:address ,data: data };
+    let address = this.FLASH_START_ADDRESS;
+    const chunk_size = 1024;
+    for (let i = 0; i < raw.length; i += chunk_size) {
+      let data = raw.slice(i, i + chunk_size);
+      const cmd: Command = {
+        type: "ProgramData",
+        start_address: address,
+        data: data,
+      };
       let send = await Protocol.getFrameRaw(cmd);
       await this.send(send);
       let resRaw = await this.receive();
@@ -109,7 +145,7 @@ export class MSPLoaderV2 extends SerialTransport {
         this.debug("Data Program Failed", res.response);
         break;
       }
-      address+=data.length
+      address += data.length;
     }
   }
   async start_app() {
@@ -120,6 +156,7 @@ export class MSPLoaderV2 extends SerialTransport {
     let resRaw = await this.receive();
     let res = Protocol.getResponse(resRaw, cmd1);
     if (res.response == BSLResponse.BSL_ACK) {
+      this.conn_established = false;
       this.debug("App Started");
     } else {
       this.debug("App Start Failed", res.response);
