@@ -75,6 +75,20 @@ textarea#console {
   resize: none;
   overflow-y: auto;
 }
+textarea#traceLog {
+  width: 100%;
+  max-width: 1280px;
+  height: 200px;
+  background-color: #1a1a1a;
+  color: #00ff00;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1em;
+  border: 1px solid #646cff;
+  border-radius: 8px;
+  padding: 1em;
+  resize: none;
+  overflow-y: auto;
+}
 
 @media (prefers-color-scheme: light) {
   :root {

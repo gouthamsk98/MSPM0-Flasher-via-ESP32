@@ -1,6 +1,13 @@
 import { SerialTransport } from "./transport_handler";
 import { Protocol, BSLResponse } from "./protocol_handler";
 import { Command, CommandResponse } from "./protocol_handler";
+type ESPCommands = {
+  ESP_BSL_CMD: number[];
+  ESP_OLED_CLR: string[];
+  ESP_OLED_ON: string[];
+  ESP_OLED_OFF: string[];
+  ESP_OLED_PRINT: string[];
+};
 export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
   //  MSPM0 Flasher
@@ -19,9 +26,13 @@ export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
 
   conn_established = false;
-  BSL_CMD = [0x42, 0x53, 0x4c]; //BSL
   FLASH_START_ADDRESS = 0x0000;
   FLASH_MAX_BUFFER_SIZE = 0x0000;
+  BSL_PW_RESET = [
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  ];
 
   //******************************* BSL Core MessageFrame Format**************************
   // |Header|Length|RSP|MSG Data|CRC32|
@@ -33,18 +44,44 @@ export class MSPLoaderV2 extends SerialTransport {
   MESSAGE_RESPONSE = 0x3b;
   ERROR_RESPONSE = 0x3a;
   //***************************************************************************************
+
+  //********************************ESP Controll*******************************************
+  ESP_BSL_CMD = [0x42, 0x53, 0x4c]; //BSL
+  ESP_OLED_CLR = ["O", "L", "D", "R", "S", "T"];
+  ESP_OLED_ON = ["O", "L", "D", "O", "N"];
+  ESP_OLED_OFF = ["O", "L", "D", "O", "F", "F"];
+  ESP_OLED_PRINT = ["O", "L", "D", "W", "R", "T"];
+
+  //***************************************************************************************
+
   constructor(device: SerialPort) {
     super(device);
   }
   LSB(x: number): number {
     return x & 0x00ff;
   }
+
+  /**
+   * Array of strings to array of uint8
+   */
+  s2a(s: string[]): Uint8Array {
+    let a = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) {
+      a[i] = s[i].charCodeAt(0);
+    }
+    return a;
+  }
   async enableBSL() {
-    await this.send(new Uint8Array(this.BSL_CMD));
+    await this.send(new Uint8Array(this.ESP_BSL_CMD));
+    await this.receive();
+    await this.send(this.s2a(this.ESP_OLED_CLR));
     await this.receive();
     this.sleep(100);
   }
-
+  async control_esp_oled(cmd: string[]) {
+    await this.send(this.s2a(cmd));
+    await this.receive();
+  }
   async establish_conn() {
     this.debug("Enabling BSL Mode...");
     await this.enableBSL();
@@ -104,17 +141,36 @@ export class MSPLoaderV2 extends SerialTransport {
         BSL_buffer_start_address: 0x${res.BSL_buffer_start_address.toString(16)}
         BCR_config_id: 0x${res.BCR_config_id.toString(16)}
         BSL_config_id: 0x${res.BSL_config_id.toString(16)}`);
+      this.unlock_bootloader();
     } else {
       this.debug("Device Info Failed", res.response);
     }
   }
-
+  async unlock_bootloader() {
+    if (!this.conn_established) this.establish_conn();
+    this.debug("Unlocking Bootloader ...");
+    let cmd: Command = {
+      type: "UnlockBootloader",
+      password: new Uint8Array(this.BSL_PW_RESET),
+    };
+    let send = await Protocol.getFrameRaw(cmd);
+    await this.send(send);
+    let resRaw = await this.receive();
+    let res = Protocol.getResponse(resRaw, cmd);
+    if (res.response == BSLResponse.BSL_ACK) {
+      this.debug("Bootloader Unlocked");
+    } else {
+      this.debug("Bootloader Unlock Failed", res.response);
+      throw new Error("Bootloader Unlock Failed");
+    }
+  }
   async mass_earse() {
     if (!this.conn_established) this.establish_conn();
     this.debug("Mass Erasing ...");
     let cmd: Command = { type: "MassErase" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
+    console.log("send is", this.hexify(send));
     let resRaw = await this.receive();
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
@@ -124,29 +180,58 @@ export class MSPLoaderV2 extends SerialTransport {
     }
   }
   async program_data(hex: string) {
-    if (!this.conn_established) this.establish_conn();
     const raw = this.intelHexToUint8Array(hex);
-    let address = this.FLASH_START_ADDRESS;
-    const chunk_size = 1024;
-    for (let i = 0; i < raw.length; i += chunk_size) {
-      let data = raw.slice(i, i + chunk_size);
-      const cmd: Command = {
-        type: "ProgramData",
-        start_address: address,
-        data: data,
-      };
-      let send = await Protocol.getFrameRaw(cmd);
-      await this.send(send);
-      let resRaw = await this.receive();
-      let res = Protocol.getResponse(resRaw, cmd);
-      if (res.response == BSLResponse.BSL_ACK) {
-        this.debug("Data Programmed");
-      } else {
-        this.debug("Data Program Failed", res.response);
-        break;
-      }
-      address += data.length;
-    }
+    if (!this.conn_established) this.establish_conn();
+    let address = 0x00000000; //this.FLASH_START_ADDRESS;
+    console.log("adress", address);
+    const cmd: Command = {
+      type: "ProgramData",
+      start_address: address,
+      data: raw,
+    };
+    let send = await Protocol.getFrameRaw(cmd);
+    await this.send(send);
+    let resRaw = await this.receive();
+    console.log("data is", resRaw);
+
+    // for (let i = 0; i < raw.length; i += chunk_size) {
+    //   let data = raw.subarray(i, i + chunk_size);
+    //   const cmd: Command = {
+    //     type: "ProgramData",
+    //     start_address: address,
+    //     data: data,
+    //   };
+    //   let send = await Protocol.getFrameRaw(cmd);
+    //   await this.send(send);
+    //   let resRaw = await this.receive();
+    //   let res = Protocol.getResponse(resRaw, cmd);
+    //   if (res.response == BSLResponse.BSL_ACK) {
+    //     this.debug("Data Programmed");
+    //   } else {
+    //     this.debug("Data Program Failed", res.response);
+    //     throw new Error("Data Program Failed");
+    //   }
+    //   address += data.length;
+    //   this.sleep(100);
+    // }
+  }
+  async flash_earse_range() {
+    if (!this.conn_established) this.establish_conn();
+    this.debug("Flashing ...");
+    let cmd: Command = {
+      type: "FlashRangeErase",
+      start_address: 0x0000,
+      end_address: 0x0000,
+    };
+    // let send = await Protocol.getFrameRaw(cmd);
+    // await this.send(send);
+    // let resRaw = await this.receive();
+    // let res = Protocol.getResponse(resRaw, cmd);
+    // if (res.response == BSLResponse.BSL_ACK) {
+    //   this.debug("Mass Erase Done");
+    // } else {
+    //   this.debug("Mass Erase Failed", res.response);
+    // }
   }
   async start_app() {
     if (!this.conn_established) this.establish_conn();
@@ -163,3 +248,11 @@ export class MSPLoaderV2 extends SerialTransport {
     }
   }
 }
+
+const address = 0x20000160;
+const addressBytes = new Uint8Array([
+  (address >> 24) & 0xff,
+  (address >> 16) & 0xff,
+  (address >> 8) & 0xff,
+  address & 0xff,
+]);

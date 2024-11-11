@@ -1,7 +1,7 @@
 export type Command =
   | { type: "Connection" }
-  | { type: "UnlockBootloader"; data: Uint8Array }
-  | { type: "FlashRangeErase"; start_address: number; data: Uint8Array }
+  | { type: "UnlockBootloader"; password: Uint8Array }
+  | { type: "FlashRangeErase"; start_address: number; end_address: number }
   | { type: "MassErase" }
   | { type: "ProgramData"; start_address: number; data: Uint8Array }
   | { type: "ProgramDataFast"; start_address: number; data: Uint8Array }
@@ -131,18 +131,39 @@ export class Protocol {
       }
       case "ProgramData": {
         const data = command.data;
-        const start_address = command.start_address;
-        const length = data.length;
+        const start_address = [
+          (command.start_address >> 24) & 0xff,
+          (command.start_address >> 16) & 0xff,
+          (command.start_address >> 8) & 0xff,
+          command.start_address & 0xff,
+        ];
+        const length = data.length + 4 + 1;
         const crc = this.softwareCRC(
-          new Uint8Array([this.PROGRAM_DATA, ...data]),
-          length + 1
+          new Uint8Array([this.PROGRAM_DATA, ...start_address, ...data]),
+          length
         );
         return new Uint8Array([
           this.HEADER,
-          length >> 8,
           length & 0xff,
+          length >> 8,
           this.PROGRAM_DATA,
-          start_address,
+          ...start_address,
+          ...data,
+          ...crc,
+        ]);
+      }
+      case "UnlockBootloader": {
+        const data = command.password;
+        const length = data.length + 1;
+        const crc = this.softwareCRC(
+          new Uint8Array([this.UNLOCK_BOOTLOADER, ...data]),
+          length
+        );
+        return new Uint8Array([
+          this.HEADER,
+          length & 0xff,
+          length >> 8,
+          this.UNLOCK_BOOTLOADER,
           ...data,
           ...crc,
         ]);
@@ -155,13 +176,15 @@ export class Protocol {
     switch (command.type) {
       case "Connection":
       case "StartApp":
+        return { type: command.type, response: data[0] };
       case "MassErase":
       case "ProgramData":
-        return { type: command.type, response: data[0] };
+      case "UnlockBootloader":
+        return { type: command.type, response: data[5] };
       case "GetDeviceInfo":
         return {
           type: command.type,
-          response: data[0],
+          response: data[5],
           CMD_interpreter_version:
             (data[this.OFFSET_BYTE + 2] << 8) | data[this.OFFSET_BYTE + 1],
           build_id:

@@ -7,6 +7,7 @@ export class SerialTransport {
   private leftOver = new Uint8Array(0);
   private reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   slipReaderEnabled = true;
+  trace_dom_log = true;
   constructor(public device: SerialPort) {
     console.log("SerialTransport intialized");
   }
@@ -138,6 +139,14 @@ export class SerialTransport {
     const traceMessage = `${prefix} ${message}`;
     console.log(traceMessage);
     this.traceLog += traceMessage + "\n";
+    if (this.trace_dom_log) {
+      const consoleTextarea =
+        document.querySelector<HTMLTextAreaElement>("#traceLog")!;
+      if (consoleTextarea) {
+        consoleTextarea.value += this.traceLog;
+        consoleTextarea.scrollTop = consoleTextarea.scrollHeight;
+      }
+    }
   }
   hexify(s: Uint8Array) {
     return Array.from(s)
