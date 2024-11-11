@@ -63,8 +63,6 @@ export class MSPLoaderV2 extends SerialTransport {
   async enableBSL() {
     await this.send(new Uint8Array(this.s2a(this.ESP_CMD.BSL_ENBL)));
     await this.receive();
-    await this.send(this.s2a(this.ESP_CMD.OLED_CLR));
-    await this.receive();
     this.sleep(100);
   }
   async control_esp_oled(cmd: string[]) {
@@ -82,7 +80,7 @@ export class MSPLoaderV2 extends SerialTransport {
     if (res.response == BSLResponse.BSL_ACK) {
       this.conn_established = true;
       this.debug("BSL Mode Enabled");
-      this.get_device_info();
+      await this.get_device_info();
     } else {
       this.debug("BSL Mode Enable Failed", res.response);
       this.conn_established = false;
@@ -130,13 +128,13 @@ export class MSPLoaderV2 extends SerialTransport {
         BSL_buffer_start_address: 0x${res.BSL_buffer_start_address.toString(16)}
         BCR_config_id: 0x${res.BCR_config_id.toString(16)}
         BSL_config_id: 0x${res.BSL_config_id.toString(16)}`);
-      this.unlock_bootloader();
+      await this.unlock_bootloader();
     } else {
       this.debug("Device Info Failed", res.response);
     }
   }
   async unlock_bootloader() {
-    if (!this.conn_established) this.establish_conn();
+    if (!this.conn_established) await this.establish_conn();
     this.debug("Unlocking Bootloader ...");
     let cmd: BSLCommand = {
       type: "UnlockBootloader",
@@ -154,7 +152,7 @@ export class MSPLoaderV2 extends SerialTransport {
     }
   }
   async mass_earse() {
-    if (!this.conn_established) this.establish_conn();
+    if (!this.conn_established) await this.establish_conn();
     this.debug("Mass Erasing ...");
     let cmd: BSLCommand = { type: "MassErase" };
     let send = await Protocol.getFrameRaw(cmd);
@@ -169,8 +167,8 @@ export class MSPLoaderV2 extends SerialTransport {
     }
   }
   async program_data(hex: string) {
+    if (!this.conn_established) await this.establish_conn();
     const raw = this.intelHexToUint8Array(hex);
-    if (!this.conn_established) this.establish_conn();
     let address = 0x00000000; //this.FLASH_START_ADDRESS;
     console.log("adress", address);
     const cmd: BSLCommand = {
@@ -181,46 +179,19 @@ export class MSPLoaderV2 extends SerialTransport {
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
     let resRaw = await this.receive();
-    console.log("data is", resRaw);
-
-    // for (let i = 0; i < raw.length; i += chunk_size) {
-    //   let data = raw.subarray(i, i + chunk_size);
-    //   const cmd: Command = {
-    //     type: "ProgramData",
-    //     start_address: address,
-    //     data: data,
-    //   };
-    //   let send = await Protocol.getFrameRaw(cmd);
-    //   await this.send(send);
-    //   let resRaw = await this.receive();
-    //   let res = Protocol.getResponse(resRaw, cmd);
-    //   if (res.response == BSLResponse.BSL_ACK) {
-    //     this.debug("Data Programmed");
-    //   } else {
-    //     this.debug("Data Program Failed", res.response);
-    //     throw new Error("Data Program Failed");
-    //   }
-    //   address += data.length;
-    //   this.sleep(100);
-    // }
+    let res = Protocol.getResponse(resRaw, cmd);
+    if (res.response == BSLResponse.BSL_ACK) {
+      this.debug("Data Programmed");
+    } else {
+      this.debug("Data Program Failed", res.response);
+      throw new Error("Data Program Failed");
+    }
   }
   async flash_earse_range() {
-    if (!this.conn_established) this.establish_conn();
-    this.debug("Flashing ...");
-    // let cmd: Command = {
-    //   type: "FlashRangeErase",
-    //   start_address: 0x0000,
-    //   end_address: 0x0000,
-    // };
-    // let send = await Protocol.getFrameRaw(cmd);
-    // await this.send(send);
-    // let resRaw = await this.receive();
-    // let res = Protocol.getResponse(resRaw, cmd);
-    // if (res.response == BSLResponse.BSL_ACK) {
-    //   this.debug("Mass Erase Done");
-    // } else {
-    //   this.debug("Mass Erase Failed", res.response);
-    // }
+    this.debug("to be implemneted ");
+  }
+  async verifyFlash() {
+    this.debug("to be implemneted ");
   }
   async start_app() {
     if (!this.conn_established) this.establish_conn();

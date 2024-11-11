@@ -24,20 +24,20 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     </div><br><br>
     <input type="checkbox" id="toggleTraceLog" checked> Enable Trace Log
     <button id="getDeviceInfo" type="button">Get Device Info</button>
-    <button id="erase" type="button">Erase</button>
+    <button id="erase" type="button">Mass Erase</button>
     <button id="flash" type="button">Flash</button>
-    <button id="verify" type="button">Verify</button>
     <button id="reset" type="button">Reset</button>
+    <button id="verify" type="button">Verify</button>
     <textarea id="console" rows="15" cols="50" readonly></textarea>
   </div>
-  <div class="right">
+  <div id ="trace" class="right">
     <h4>Trace Log</h4>
     <textarea id="traceLog" rows="20" cols="50" readonly></textarea>
   </div>
 </div>
 `;
 const traceLog_button = document.getElementById("toggleTraceLog");
-const traceLog = document.getElementById("traceLog");
+const traceLog = document.getElementById("trace");
 console.log("trace", traceLog, traceLog_button);
 if (traceLog_button && traceLog)
   traceLog_button.addEventListener("change", function () {

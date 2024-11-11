@@ -30,7 +30,7 @@ export function connect(element: HTMLButtonElement) {
       })
       .catch((error) => {
         console.error(error);
-        MSPLoader.mdebug(1, "Error Connecting");
+        loaderv2.debug("Error Connecting");
         loader.disconnect();
         element.innerHTML = `Connect`;
         connection = false;
@@ -48,9 +48,9 @@ export function erase(element: HTMLButtonElement) {
       await loaderv2.mass_earse();
     } catch (e) {
       console.log(e);
-      MSPLoader.mdebug(1, "Error Erasing");
+      loaderv2.debug("Error Erasing");
     }
-    element.innerHTML = `Erase`;
+    element.innerHTML = `Mass Erase`;
   });
 }
 export function flash(element: HTMLButtonElement) {
@@ -76,19 +76,19 @@ export function flash(element: HTMLButtonElement) {
 export function verify(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      MSPLoader.mdebug(1, "Please Connect First");
+      loaderv2.debug("Please Connect First");
       return;
     }
     if (!fileContent) {
-      MSPLoader.mdebug(1, "Please upload a .Hex file first");
+      loaderv2.debug("Please upload a .Hex file first");
       return;
     }
     element.innerHTML = `Verifying...`;
     try {
-      await loader.verifyFlash(fileContent);
+      await loaderv2.verifyFlash();
     } catch (e) {
       console.log(e);
-      MSPLoader.mdebug(1, "Error Verifying");
+      loaderv2.debug("Error Verifying");
     }
     element.innerHTML = `Verify`;
   });
@@ -109,7 +109,7 @@ export function readFile(element: HTMLInputElement) {
       fileContent = await readFileAsText(file);
       console.log(fileContent);
     } else {
-      MSPLoader.mdebug(1, "Please upload a valid .hex file");
+      loaderv2.debug("Please upload a valid .hex file");
     }
   });
 }
@@ -165,7 +165,7 @@ export function fileDrop(
         fileContent = await readFileAsText(files[0]);
         console.log(fileContent);
       } else {
-        MSPLoader.mdebug(1, "Please upload a valid .hex file");
+        loaderv2.debug("Please upload a valid .hex file");
       }
     }
   });
