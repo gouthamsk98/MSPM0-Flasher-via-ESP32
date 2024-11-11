@@ -1,13 +1,14 @@
 import { SerialTransport } from "./transport_handler";
 import { Protocol, BSLResponse } from "./protocol_handler";
 import { Command, CommandResponse } from "./protocol_handler";
-type ESPCommands = {
-  ESP_BSL_CMD: number[];
-  ESP_OLED_CLR: string[];
-  ESP_OLED_ON: string[];
-  ESP_OLED_OFF: string[];
-  ESP_OLED_PRINT: string[];
-};
+
+// type ESPCommands = {
+//   ESP_BSL_CMD: number[];
+//   ESP_OLED_CLR: string[];
+//   ESP_OLED_ON: string[];
+//   ESP_OLED_OFF: string[];
+//   ESP_OLED_PRINT: string[];
+// };
 export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
   //  MSPM0 Flasher
@@ -218,11 +219,11 @@ export class MSPLoaderV2 extends SerialTransport {
   async flash_earse_range() {
     if (!this.conn_established) this.establish_conn();
     this.debug("Flashing ...");
-    let cmd: Command = {
-      type: "FlashRangeErase",
-      start_address: 0x0000,
-      end_address: 0x0000,
-    };
+    // let cmd: Command = {
+    //   type: "FlashRangeErase",
+    //   start_address: 0x0000,
+    //   end_address: 0x0000,
+    // };
     // let send = await Protocol.getFrameRaw(cmd);
     // await this.send(send);
     // let resRaw = await this.receive();
@@ -248,11 +249,3 @@ export class MSPLoaderV2 extends SerialTransport {
     }
   }
 }
-
-const address = 0x20000160;
-const addressBytes = new Uint8Array([
-  (address >> 24) & 0xff,
-  (address >> 16) & 0xff,
-  (address >> 8) & 0xff,
-  address & 0xff,
-]);

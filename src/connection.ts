@@ -60,7 +60,7 @@ export function flash(element: HTMLButtonElement) {
       return;
     }
     if (!fileContent) {
-      loaderv2.debug(1, "Please upload a .Hex file first");
+      loaderv2.debug("Please upload a .Hex file first");
       return;
     }
     element.innerHTML = `Flashing...`;
@@ -116,7 +116,7 @@ export function readFile(element: HTMLInputElement) {
 export function reset(element: HTMLButtonElement) {
   element.addEventListener("click", async () => {
     if (!connection) {
-      loaderv2.debug(1, "Please Connect First");
+      loaderv2.debug("Please Connect First");
       return;
     }
     element.innerHTML = `Resting...`;

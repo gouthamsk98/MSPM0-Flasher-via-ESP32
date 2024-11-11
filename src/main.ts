@@ -61,7 +61,7 @@ if (dropZone && fileInput && dropMessage) {
     if (!event.dataTransfer) return;
     const files = event.dataTransfer.files;
     if (files.length > 0) {
-      fileInput.files = files;
+      // fileInput.files = files;
       dropMessage.style.display = "block";
     }
   });
