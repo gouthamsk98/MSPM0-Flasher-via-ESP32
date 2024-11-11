@@ -1,31 +1,22 @@
+//***************************************************************************************
+//  MSPM0 Flasher
+//
+//  Receives information from backchannel UART, tells target BSL to:
+//  Description; Flashes the all target MSPM0 series using external Espressif ESP32s3.
+//      1) Wipe target device using the incorrect password method.
+//      2) Write any bytes the connected PC tells this device to write to the target.
+//      3) Inform the controlling PC of any UART or other errors.
+//
+// Copyright (c) Nov 2024 Goutham S Krishna
+// Evobi Automations Pvt Ltd
+// All rights reserved.
+// This code is licensed under the MIT License.
+// You may obtain a copy of the License at https://opensource.org/licenses/MIT
+//***************************************************************************************
 import { SerialTransport } from "./transport_handler";
 import { Protocol, BSLResponse } from "./protocol_handler";
-import { Command, CommandResponse } from "./protocol_handler";
-
-// type ESPCommands = {
-//   ESP_BSL_CMD: number[];
-//   ESP_OLED_CLR: string[];
-//   ESP_OLED_ON: string[];
-//   ESP_OLED_OFF: string[];
-//   ESP_OLED_PRINT: string[];
-// };
+import { BSLCommand, CommandResponse, ESPCommand } from "./protocol_handler";
 export class MSPLoaderV2 extends SerialTransport {
-  //***************************************************************************************
-  //  MSPM0 Flasher
-  //
-  //  Receives information from backchannel UART, tells target BSL to:
-  //  Description; Flashes the all target MSPM0 series using external Espressif ESP32s3.
-  //      1) Wipe target device using the incorrect password method.
-  //      2) Write any bytes the connected PC tells this device to write to the target.
-  //      3) Inform the controlling PC of any UART or other errors.
-  //
-  // Copyright (c) Nov 2024 Goutham S Krishna
-  // Evobi Automations Pvt Ltd
-  // All rights reserved.
-  // This code is licensed under the MIT License.
-  // You may obtain a copy of the License at https://opensource.org/licenses/MIT
-  //***************************************************************************************
-
   conn_established = false;
   FLASH_START_ADDRESS = 0x0000;
   FLASH_MAX_BUFFER_SIZE = 0x0000;
@@ -47,21 +38,18 @@ export class MSPLoaderV2 extends SerialTransport {
   //***************************************************************************************
 
   //********************************ESP Controll*******************************************
-  ESP_BSL_CMD = [0x42, 0x53, 0x4c]; //BSL
-  ESP_OLED_CLR = ["O", "L", "D", "R", "S", "T"];
-  ESP_OLED_ON = ["O", "L", "D", "O", "N"];
-  ESP_OLED_OFF = ["O", "L", "D", "O", "F", "F"];
-  ESP_OLED_PRINT = ["O", "L", "D", "W", "R", "T"];
-
+  ESP_CMD: ESPCommand = {
+    BSL_ENBL: ["B", "S", "L"],
+    OLED_CLR: ["O", "L", "D", "R", "S", "T"],
+    OLED_ON: ["O", "L", "D", "O", "N"],
+    OLED_OFF: ["O", "L", "D", "O", "F", "F"],
+    OLED_PRINT: ["O", "L", "D", "W", "R", "T"],
+  };
   //***************************************************************************************
 
   constructor(device: SerialPort) {
     super(device);
   }
-  LSB(x: number): number {
-    return x & 0x00ff;
-  }
-
   /**
    * Array of strings to array of uint8
    */
@@ -73,9 +61,9 @@ export class MSPLoaderV2 extends SerialTransport {
     return a;
   }
   async enableBSL() {
-    await this.send(new Uint8Array(this.ESP_BSL_CMD));
+    await this.send(new Uint8Array(this.s2a(this.ESP_CMD.BSL_ENBL)));
     await this.receive();
-    await this.send(this.s2a(this.ESP_OLED_CLR));
+    await this.send(this.s2a(this.ESP_CMD.OLED_CLR));
     await this.receive();
     this.sleep(100);
   }
@@ -86,7 +74,7 @@ export class MSPLoaderV2 extends SerialTransport {
   async establish_conn() {
     this.debug("Enabling BSL Mode...");
     await this.enableBSL();
-    let cmd: Command = { type: "Connection" };
+    let cmd: BSLCommand = { type: "Connection" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
     let resRaw = await this.receive();
@@ -121,7 +109,7 @@ export class MSPLoaderV2 extends SerialTransport {
   }
   async get_device_info() {
     if (!this.conn_established) this.establish_conn();
-    const cmd: Command = { type: "GetDeviceInfo" };
+    const cmd: BSLCommand = { type: "GetDeviceInfo" };
     const send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
     const resRaw = await this.receive();
@@ -150,7 +138,7 @@ export class MSPLoaderV2 extends SerialTransport {
   async unlock_bootloader() {
     if (!this.conn_established) this.establish_conn();
     this.debug("Unlocking Bootloader ...");
-    let cmd: Command = {
+    let cmd: BSLCommand = {
       type: "UnlockBootloader",
       password: new Uint8Array(this.BSL_PW_RESET),
     };
@@ -168,7 +156,7 @@ export class MSPLoaderV2 extends SerialTransport {
   async mass_earse() {
     if (!this.conn_established) this.establish_conn();
     this.debug("Mass Erasing ...");
-    let cmd: Command = { type: "MassErase" };
+    let cmd: BSLCommand = { type: "MassErase" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
     console.log("send is", this.hexify(send));
@@ -185,7 +173,7 @@ export class MSPLoaderV2 extends SerialTransport {
     if (!this.conn_established) this.establish_conn();
     let address = 0x00000000; //this.FLASH_START_ADDRESS;
     console.log("adress", address);
-    const cmd: Command = {
+    const cmd: BSLCommand = {
       type: "ProgramData",
       start_address: address,
       data: raw,
@@ -236,7 +224,7 @@ export class MSPLoaderV2 extends SerialTransport {
   }
   async start_app() {
     if (!this.conn_established) this.establish_conn();
-    let cmd1: Command = { type: "StartApp" };
+    let cmd1: BSLCommand = { type: "StartApp" };
     let send1 = await Protocol.getFrameRaw(cmd1);
     await this.send(send1);
     let resRaw = await this.receive();

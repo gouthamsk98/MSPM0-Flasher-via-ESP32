@@ -1,4 +1,11 @@
-export type Command =
+export type ESPCommand = {
+  BSL_ENBL: string[];
+  OLED_CLR: string[];
+  OLED_ON: string[];
+  OLED_OFF: string[];
+  OLED_PRINT: string[];
+};
+export type BSLCommand =
   | { type: "Connection" }
   | { type: "UnlockBootloader"; password: Uint8Array }
   | { type: "FlashRangeErase"; start_address: number; end_address: number }
@@ -87,7 +94,7 @@ export class Protocol {
       (crc >>> 24) & 0xff, // Most significant byte
     ]);
   }
-  static async getFrameRaw(command: Command): Promise<Uint8Array> {
+  static async getFrameRaw(command: BSLCommand): Promise<Uint8Array> {
     switch (command.type) {
       case "Connection": {
         const crc = this.softwareCRC(new Uint8Array([this.CONNECTION]), 1);
@@ -172,7 +179,7 @@ export class Protocol {
         throw new Error("Unimplemented command");
     }
   }
-  static getResponse(data: Uint8Array, command: Command): CommandResponse {
+  static getResponse(data: Uint8Array, command: BSLCommand): CommandResponse {
     switch (command.type) {
       case "Connection":
       case "StartApp":

@@ -140,3 +140,33 @@ export function getDeviceInfo(element: HTMLButtonElement) {
     element.innerHTML = `Get Device Info`;
   });
 }
+export function fileDrop(
+  element: HTMLDivElement,
+  file_element: HTMLInputElement,
+  dropMessage: HTMLElement
+) {
+  element.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    element.style.borderColor = "#646cff";
+  });
+
+  element.addEventListener("dragleave", () => {
+    element.style.borderColor = "#ccc";
+  });
+  element.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    element.style.borderColor = "#ccc";
+    if (!event.dataTransfer) return;
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      dropMessage.style.display = "block";
+      file_element.files = files;
+      if (files && files[0].name.endsWith(".hex")) {
+        fileContent = await readFileAsText(files[0]);
+        console.log(fileContent);
+      } else {
+        MSPLoader.mdebug(1, "Please upload a valid .hex file");
+      }
+    }
+  });
+}

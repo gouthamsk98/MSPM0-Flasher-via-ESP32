@@ -7,6 +7,7 @@ import {
   reset,
   verify,
   getDeviceInfo,
+  fileDrop,
 } from "./connection.ts";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 <h1>MSPMO Flasher via UART</h1>
@@ -15,7 +16,9 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="left">
     <button id="connect" type="button">Connect</button>
     <input type="file" id="myfile" name="myfile" accept=".hex">
-
+    <div id="dropZone" style="border: 2px dashed #ccc; padding: 10px; margin-top: 10px;">
+      Drag and drop your file here
+    </div>
     <div id="dropMessage" style="margin-top: 10px; color: green; display: none;">
       File has been uploaded successfully!
     </div><br><br>
@@ -33,10 +36,6 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 </div>
 `;
-
-const dropZone = document.getElementById("dropZone");
-const fileInput = document.getElementById("myfile");
-const dropMessage = document.getElementById("dropMessage");
 const traceLog_button = document.getElementById("toggleTraceLog");
 const traceLog = document.getElementById("traceLog");
 console.log("trace", traceLog, traceLog_button);
@@ -45,27 +44,7 @@ if (traceLog_button && traceLog)
     if (traceLog.style.display == "none") traceLog.style.display = "inline";
     else traceLog.style.display = "none";
   });
-if (dropZone && fileInput && dropMessage) {
-  dropZone.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    dropZone.style.borderColor = "#646cff";
-  });
 
-  dropZone.addEventListener("dragleave", () => {
-    dropZone.style.borderColor = "#ccc";
-  });
-
-  dropZone.addEventListener("drop", (event) => {
-    event.preventDefault();
-    dropZone.style.borderColor = "#ccc";
-    if (!event.dataTransfer) return;
-    const files = event.dataTransfer.files;
-    if (files.length > 0) {
-      // fileInput.files = files;
-      dropMessage.style.display = "block";
-    }
-  });
-}
 connect(document.querySelector<HTMLButtonElement>("#connect")!);
 getDeviceInfo(document.querySelector<HTMLButtonElement>("#getDeviceInfo")!);
 erase(document.querySelector<HTMLButtonElement>("#erase")!);
@@ -73,3 +52,8 @@ flash(document.querySelector<HTMLButtonElement>("#flash")!);
 readFile(document.querySelector<HTMLInputElement>("#myfile")!);
 reset(document.querySelector<HTMLButtonElement>("#reset")!);
 verify(document.querySelector<HTMLButtonElement>("#verify")!);
+fileDrop(
+  document.querySelector<HTMLDivElement>("#dropZone")!,
+  document.querySelector<HTMLInputElement>("#myfile")!,
+  document.querySelector<HTMLElement>("#dropMessage")!
+);
