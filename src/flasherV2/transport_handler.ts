@@ -218,7 +218,10 @@ export class SerialTransport {
     if (this.device.writable) {
       const writer = this.device.writable.getWriter();
       await writer.write(data);
-      this.debug("Data sent", data, true, false);
+      if (this.tracing) {
+        this.trace(`Write ${data.length} bytes: ${this.hexConvert(data)}`);
+      }
+      // this.debug("Data sent", data, true, false);
       writer.releaseLock();
     }
   }
