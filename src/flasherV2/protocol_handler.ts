@@ -1,3 +1,15 @@
+export enum OLEDPOS {
+  ALIGN_DEFAULT = 0,
+  ALIGN_TOP_LEFT = 1,
+  ALIGN_TOP_MID = 2,
+  ALIGN_TOP_RIGHT = 3,
+  ALIGN_BOTTOM_LEFT = 4,
+  ALIGN_BOTTOM_MED = 5,
+  ALIGN_BOTTOM_RIGHT = 6,
+  ALIGN_LEFT_MID = 7,
+  ALIGN_RIGHT_MID = 8,
+  ALIGN_CENTER = 9,
+}
 export type ESPCommand = {
   BSL_ENBL: string[];
   OLED_CLR: string[];
