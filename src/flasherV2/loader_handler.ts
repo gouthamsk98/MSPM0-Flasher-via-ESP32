@@ -22,6 +22,8 @@ import {
   OLEDPOS,
 } from "./protocol_handler";
 export class MSPLoaderV2 extends SerialTransport {
+  BSL_TRY = 0;
+  BSL_TRY_MAX = 10;
   DEFAULT_TIMEOUT = 2000;
   conn_established = false;
   FLASH_START_ADDRESS = 0x0000;
@@ -79,7 +81,6 @@ export class MSPLoaderV2 extends SerialTransport {
   async enableBSL() {
     await this.send(new Uint8Array(this.sa2a(this.ESP_CMD.BSL_ENBL)));
     await this.read(this.DEFAULT_TIMEOUT, 5);
-    await this.esp_oled_print("BSL", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
     await this.sleep(100);
   }
   async control_esp_oled(cmd: string[]) {
@@ -87,19 +88,29 @@ export class MSPLoaderV2 extends SerialTransport {
     await this.receive();
   }
   async establish_conn() {
+    this.BSL_TRY++;
     this.debug("Enabling BSL Mode...");
     await this.enableBSL();
     let cmd: BSLCommand = { type: "Connection" };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
-    let resRaw = await this.receive();
+    let resRaw = await this.read(this.DEFAULT_TIMEOUT * 2, 1);
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
+      await this.esp_oled_print("BSL", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      this.BSL_TRY = 0;
       this.conn_established = true;
       this.debug("BSL Mode Enabled");
       await this.get_device_info();
     } else {
       this.debug("BSL Mode Enable Failed", res.response);
+      if (this.BSL_TRY < this.BSL_TRY_MAX) {
+        this.debug(
+          `Retrying...(attempt : ${this.BSL_TRY}) Enabling BSL Mode...`
+        );
+        await this.establish_conn();
+        return;
+      }
       this.conn_established = false;
       throw new Error("BSL Mode Enable Failed");
     }
@@ -127,7 +138,7 @@ export class MSPLoaderV2 extends SerialTransport {
     const cmd: BSLCommand = { type: "GetDeviceInfo" };
     const send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
-    const resRaw = await this.receive();
+    const resRaw = await this.read(this.DEFAULT_TIMEOUT, 33);
     const resSlip = this.slipReader(resRaw);
     this.check_crc(resSlip);
     let res: CommandResponse = Protocol.getResponse(resSlip, cmd);
@@ -182,6 +193,7 @@ export class MSPLoaderV2 extends SerialTransport {
       this.debug("Mass Erase Done");
       await this.esp_oled_print("Erase Done", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
     } else {
+      this.conn_established = false;
       this.debug("Mass Erase Failed", res.response);
       await this.esp_oled_print("Erase Failed", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
     }
@@ -223,6 +235,7 @@ export class MSPLoaderV2 extends SerialTransport {
       this.debug("Data Programmed");
       await this.esp_oled_print("Flashed", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
     } else {
+      this.conn_established = false;
       this.debug("Data Program Failed", res.response);
       throw new Error("Data Program Failed");
     }
