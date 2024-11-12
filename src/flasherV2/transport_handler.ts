@@ -80,7 +80,7 @@ export class SerialTransport {
       if (this.tracing) {
         console.log("Slip reader results");
         this.trace(
-          `Read ${slipReaderResult.length} bytes: ${this.hexConvert(
+          `Slip Read ${slipReaderResult.length} bytes: ${this.hexConvert(
             slipReaderResult
           )}`
         );
@@ -143,7 +143,7 @@ export class SerialTransport {
       const consoleTextarea =
         document.querySelector<HTMLTextAreaElement>("#traceLog")!;
       if (consoleTextarea) {
-        consoleTextarea.value += this.traceLog;
+        consoleTextarea.value = this.traceLog;
         consoleTextarea.scrollTop = consoleTextarea.scrollHeight;
       }
     }
