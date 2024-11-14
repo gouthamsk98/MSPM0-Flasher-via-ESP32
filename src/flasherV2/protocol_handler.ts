@@ -19,12 +19,16 @@ export type ESPCommand = {
 };
 export type BSLCommand =
   | { type: "Connection" }
-  | { type: "UnlockBootloader"; password: Uint8Array }
+  | { type: "UnlockBootloader"; data: Uint8Array }
   | { type: "FlashRangeErase"; start_address: number; end_address: number }
   | { type: "MassErase" }
   | { type: "ProgramData"; start_address: number; data: Uint8Array }
   | { type: "ProgramDataFast"; start_address: number; data: Uint8Array }
-  | { type: "MemoryRead"; start_address: number; data: Uint8Array }
+  | {
+      type: "MemoryRead";
+      start_address: number;
+      data: Uint8Array;
+    }
   | { type: "FactoryReset"; start_address: number; data: Uint8Array }
   | { type: "GetDeviceInfo" }
   | { type: "StandaloneVerify"; start_address: number; data: Uint8Array }
@@ -172,7 +176,8 @@ export class Protocol {
         ]);
       }
       case "UnlockBootloader": {
-        const data = command.password;
+        const data = command.data;
+        if (data.length != 32) throw new Error("Data length should be 32");
         const length = data.length + 1;
         const crc = this.softwareCRC(
           new Uint8Array([this.UNLOCK_BOOTLOADER, ...data]),
@@ -183,6 +188,30 @@ export class Protocol {
           length & 0xff,
           length >> 8,
           this.UNLOCK_BOOTLOADER,
+          ...data,
+          ...crc,
+        ]);
+      }
+      case "MemoryRead": {
+        const data = command.data;
+        if (data.length != 4) throw new Error("Data length should be 4");
+        const start_address = [
+          (command.start_address >> 24) & 0xff,
+          (command.start_address >> 16) & 0xff,
+          (command.start_address >> 8) & 0xff,
+          command.start_address & 0xff,
+        ];
+        const length = data.length + 4 + 1;
+        const crc = this.softwareCRC(
+          new Uint8Array([this.MEMORY_READ, ...start_address, ...data]),
+          length
+        );
+        return new Uint8Array([
+          this.HEADER,
+          length & 0xff,
+          length >> 8,
+          this.MEMORY_READ,
+          ...start_address,
           ...data,
           ...crc,
         ]);

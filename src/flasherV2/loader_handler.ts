@@ -97,7 +97,12 @@ export class MSPLoaderV2 extends SerialTransport {
     let resRaw = await this.read(this.DEFAULT_TIMEOUT * 2, 1);
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
-      await this.esp_oled_print("BSL", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      await this.esp_oled_print(
+        "BSL Mode Enabled",
+        OLEDPOS.ALIGN_BOTTOM_LEFT,
+        0,
+        0
+      );
       this.BSL_TRY = 0;
       this.conn_established = true;
       this.debug("BSL Mode Enabled");
@@ -105,9 +110,7 @@ export class MSPLoaderV2 extends SerialTransport {
     } else {
       this.debug("BSL Mode Enable Failed", res.response);
       if (this.BSL_TRY < this.BSL_TRY_MAX) {
-        this.debug(
-          `Retrying...(attempt : ${this.BSL_TRY}) Enabling BSL Mode...`
-        );
+        this.debug(`Retrying...(attempt : ${this.BSL_TRY})`);
         await this.establish_conn();
         return;
       }
@@ -132,6 +135,28 @@ export class MSPLoaderV2 extends SerialTransport {
       throw new Error("CRC Check Failed");
     }
     return true;
+  }
+  async esp_oled_print(
+    text: string,
+    align: OLEDPOS = OLEDPOS.ALIGN_DEFAULT,
+    x_offset = 0,
+    y_offset = 0,
+    clr_screen = true
+  ) {
+    if (clr_screen) {
+      await this.send(new Uint8Array(this.sa2a(this.ESP_CMD.OLED_CLR)));
+
+      await this.read(this.DEFAULT_TIMEOUT, 8);
+    }
+    let data = new Uint8Array([
+      ...this.sa2a(this.ESP_CMD.OLED_PRINT),
+      align,
+      x_offset,
+      y_offset,
+      ...this.s2a(text),
+    ]);
+    await this.send(data);
+    await this.read(this.DEFAULT_TIMEOUT, 5);
   }
   async get_device_info() {
     if (!this.conn_established) this.establish_conn();
@@ -166,7 +191,7 @@ export class MSPLoaderV2 extends SerialTransport {
     this.debug("Unlocking Bootloader ...");
     let cmd: BSLCommand = {
       type: "UnlockBootloader",
-      password: new Uint8Array(this.BSL_PW_RESET),
+      data: new Uint8Array(this.BSL_PW_RESET),
     };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
@@ -191,37 +216,30 @@ export class MSPLoaderV2 extends SerialTransport {
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
       this.debug("Mass Erase Done");
-      await this.esp_oled_print("Erase Done", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      await this.esp_oled_print("Erase Done", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
     } else {
       this.conn_established = false;
       this.debug("Mass Erase Failed", res.response);
-      await this.esp_oled_print("Erase Failed", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      await this.esp_oled_print(
+        "Erase Failed",
+        OLEDPOS.ALIGN_BOTTOM_LEFT,
+        0,
+        0
+      );
     }
-  }
-  async esp_oled_print(
-    text: string,
-    align: OLEDPOS = OLEDPOS.ALIGN_DEFAULT,
-    x_offset = 0,
-    y_offset = 0
-  ) {
-    await this.send(new Uint8Array(this.sa2a(this.ESP_CMD.OLED_CLR)));
-    await this.read(this.DEFAULT_TIMEOUT, 8);
-    let data = new Uint8Array([
-      ...this.sa2a(this.ESP_CMD.OLED_PRINT),
-      align,
-      x_offset,
-      y_offset,
-      ...this.s2a(text),
-    ]);
-    await this.send(data);
-    await this.read(this.DEFAULT_TIMEOUT, 5);
   }
   async program_data(hex: string) {
     if (!this.conn_established) await this.establish_conn();
-    await this.esp_oled_print("Flashing...", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+    await this.esp_oled_print("Flashing...", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
+    await this.esp_oled_print(
+      "[=====100%=====]",
+      OLEDPOS.ALIGN_LEFT_MID,
+      0,
+      0,
+      false
+    );
     const raw = this.intelHexToUint8Array(hex);
     let address = 0x00000000; //this.FLASH_START_ADDRESS;
-    console.log("adress", address);
     const cmd: BSLCommand = {
       type: "ProgramData",
       start_address: address,
@@ -233,17 +251,42 @@ export class MSPLoaderV2 extends SerialTransport {
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
       this.debug("Data Programmed");
-      await this.esp_oled_print("Flashed", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      await this.esp_oled_print(
+        "Firmware Flashed",
+        OLEDPOS.ALIGN_BOTTOM_LEFT,
+        0,
+        0
+      );
     } else {
       this.conn_established = false;
+      await this.esp_oled_print(
+        "Error Flashing",
+        OLEDPOS.ALIGN_BOTTOM_LEFT,
+        0,
+        0
+      );
       this.debug("Data Program Failed", res.response);
       throw new Error("Data Program Failed");
     }
   }
-  async flash_earse_range() {
-    this.debug("to be implemneted ");
+  async read_memory() {
+    if (!this.conn_established) await this.establish_conn();
+    await this.esp_oled_print("Reading...", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
+    let address = this.FLASH_START_ADDRESS;
+    // const cmd: BSLCommand = {
+    //   type: "ProgramData",
+    //   start_address: address,
+    //   data: new Uint8Array([0x08, 0x00, 0x00, 0x00]),
+    // };
+    // let send = await Protocol.getFrameRaw(cmd);
+    let send = new Uint8Array([
+      0x80, 0x09, 0x00, 0x29, 0x00, 0x0c, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+      0x32, 0x9d, 0xb0, 0x35,
+    ]);
+    await this.send(send);
+    this.receive();
   }
-  async verifyFlash() {
+  async flash_earse_range() {
     this.debug("to be implemneted ");
   }
   async start_app() {
@@ -255,7 +298,7 @@ export class MSPLoaderV2 extends SerialTransport {
     let res = Protocol.getResponse(resRaw, cmd1);
     if (res.response == BSLResponse.BSL_ACK) {
       this.conn_established = false;
-      await this.esp_oled_print("App Started", OLEDPOS.ALIGN_TOP_LEFT, 0, 0);
+      await this.esp_oled_print("App Started", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
       this.debug("App Started");
     } else {
       this.debug("App Start Failed", res.response);

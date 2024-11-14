@@ -213,7 +213,14 @@ export class SerialTransport {
       this.debug("Error in connect", e);
     }
   }
-
+  async disconnect() {
+    try {
+      await this.device.close();
+      this.debug("Device Disconnected");
+    } catch (e) {
+      this.debug("Error in disconnect", e);
+    }
+  }
   async send(data: Uint8Array) {
     if (this.device.writable) {
       const writer = this.device.writable.getWriter();

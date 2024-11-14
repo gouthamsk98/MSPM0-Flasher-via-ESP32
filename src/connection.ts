@@ -13,19 +13,18 @@ const filters_serial = [
 ];
 export function connect(element: HTMLButtonElement) {
   element.addEventListener("click", () => {
-    if (connection && loader) {
-      loader.disconnect();
+    if (connection && loaderv2) {
+      loaderv2.disconnect();
       element.innerHTML = `Connect`;
       connection = false;
       return;
     }
-    element.innerHTML = `Connecting...`;
     navigator.serial
       .requestPort({ filters: filters_serial })
       .then(async (port) => {
         loaderv2 = await new MSPLoaderV2(port);
         await loaderv2.connect();
-        element.innerHTML = `Connected`;
+        element.innerHTML = `disconnect`;
         connection = true;
       })
       .catch((error) => {
@@ -79,13 +78,9 @@ export function verify(element: HTMLButtonElement) {
       loaderv2.debug("Please Connect First");
       return;
     }
-    if (!fileContent) {
-      loaderv2.debug("Please upload a .Hex file first");
-      return;
-    }
     element.innerHTML = `Verifying...`;
     try {
-      await loaderv2.verifyFlash();
+      await loaderv2.read_memory();
     } catch (e) {
       console.log(e);
       loaderv2.debug("Error Verifying");
