@@ -272,7 +272,7 @@ export class MSPLoaderV2 extends SerialTransport {
   async read_memory() {
     if (!this.conn_established) await this.establish_conn();
     await this.esp_oled_print("Reading...", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
-    let address = this.FLASH_START_ADDRESS;
+    // let address = this.FLASH_START_ADDRESS;
     // const cmd: BSLCommand = {
     //   type: "ProgramData",
     //   start_address: address,
