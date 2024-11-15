@@ -238,7 +238,7 @@ export class MSPLoaderV2 extends SerialTransport {
       0,
       false
     );
-    const raw = this.intelHexToUint8Array(hex);
+    const raw = await this.readIHex(hex);
     let address = 0x00000000; //this.FLASH_START_ADDRESS;
     const cmd: BSLCommand = {
       type: "ProgramData",

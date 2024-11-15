@@ -93,7 +93,7 @@ function readFileAsText(file: File): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
-    reader.readAsText(file);
+    reader.readAsText(file, "utf-8");
   });
 }
 export function readFile(element: HTMLInputElement) {

@@ -1,3 +1,4 @@
+import { Section, IHexRecord } from "./protocol_handler";
 export class SerialTransport {
   baudrate = 9600;
   buffer_size = 1024 * 1024; //1MB (max can be 16MB)
@@ -232,22 +233,66 @@ export class SerialTransport {
       writer.releaseLock();
     }
   }
-  intelHexToUint8Array(hexString: string) {
-    const lines = hexString.trim().split("\n");
-    const data: Array<number> = [];
-    lines.forEach((line) => {
-      if (line.startsWith(":")) {
-        const byteCount = parseInt(line.substr(1, 2), 16);
-        const dataStartIndex = 9; // Data starts after 9 characters (: + 2-byte count + 4-byte address + 2-byte record type)
-        const dataEndIndex = dataStartIndex + byteCount * 2;
+  private mergeSections(sections: Section[]): Uint8Array {
+    sections.sort((a, b) => a.offset - b.offset); // order by start address
 
-        for (let i = dataStartIndex; i < dataEndIndex; i += 2) {
-          data.push(parseInt(line.substr(i, 2), 16));
+    const startAddress = sections[0].offset;
+    const endAddress =
+      sections[sections.length - 1].offset +
+      sections[sections.length - 1].value.length;
+
+    const totalSize = endAddress - startAddress;
+
+    const binary = new Uint8Array(totalSize);
+    // FIXME: check section overlap?
+    for (const section of sections) {
+      const sectStart = section.offset - startAddress;
+      binary.set(section.value, sectStart);
+    }
+    return binary;
+  }
+  async readIHex(data: string): Promise<Uint8Array> {
+    console.log("read intel hex");
+
+    const records: Section[] = [];
+    let baseAddress = 0;
+
+    const lines = data.split("\n");
+    for (const line of lines) {
+      if (line.startsWith(":")) {
+        const record = this.parseIHexRecord(line);
+        switch (record.type) {
+          case "00": // Data
+            const offset = baseAddress + record.offset;
+            records.push({ offset, value: record.data });
+            break;
+          case "01": // End Of File
+            break;
+          case "02": // Extended Segment Address
+            baseAddress = record.address * 16;
+            break;
+          case "03": // Start Segment Address
+            break;
+          case "04": // Extended Linear Address
+            baseAddress = record.address << 16;
+            break;
+          case "05": // Start Linear Address
+            break;
         }
       }
-    });
-
-    return new Uint8Array(data);
+    }
+    return this.mergeSections(records);
+  }
+  parseIHexRecord(line: string): IHexRecord {
+    const length = parseInt(line.substr(1, 2), 16);
+    const offset = parseInt(line.substr(3, 4), 16);
+    const type = line.substr(7, 2);
+    const data = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      data[i] = parseInt(line.substr(9 + i * 2, 2), 16);
+    }
+    const address = parseInt(line.substr(9, 4), 16);
+    return { type, offset, data, address };
   }
   async receive(timeout = 0) {
     if (this.leftOver.length != 0) {

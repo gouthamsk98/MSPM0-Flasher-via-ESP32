@@ -1,3 +1,13 @@
+export interface Section {
+  offset: number;
+  value: Uint8Array;
+}
+export interface IHexRecord {
+  type: string;
+  offset: number;
+  data: Uint8Array;
+  address: number;
+}
 export enum OLEDPOS {
   ALIGN_DEFAULT = 0,
   ALIGN_TOP_LEFT = 1,
