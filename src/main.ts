@@ -9,9 +9,10 @@ import {
   getDeviceInfo,
   fileDrop,
 } from "./connection.ts";
+import packageJson from "../package.json";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-<h1>MSPMO Flasher via UART</h1>
-<h4>Supported Browsers: Chrome, Edge</h4>
+<h1>MSPMO Flasher via UART</h1> 
+<h4>Version: ${packageJson.version} | Supported Browsers: Chrome, Edge</h4>
 <div class="container">
   <div class="left">
     <button id="connect" type="button">Connect</button>
