@@ -1,7 +1,7 @@
 import { Section, IHexRecord } from "./protocol_handler";
 export class SerialTransport {
   baudrate = 9600;
-  buffer_size = 1024 * 1024; //1MB (max can be 16MB)
+  buffer_size = 1024 * 1024*16; //16MB (max can be 16MB)
   private traceLog = "";
   private lastTraceTime = Date.now();
   public tracing = true;

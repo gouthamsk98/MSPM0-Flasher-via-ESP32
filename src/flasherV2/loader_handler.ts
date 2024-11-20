@@ -247,7 +247,7 @@ export class MSPLoaderV2 extends SerialTransport {
     };
     let send = await Protocol.getFrameRaw(cmd);
     await this.send(send);
-    let resRaw = await this.read(this.DEFAULT_TIMEOUT, 10);
+    let resRaw = await this.read(this.DEFAULT_TIMEOUT*2, 10);
     let res = Protocol.getResponse(resRaw, cmd);
     if (res.response == BSLResponse.BSL_ACK) {
       this.debug("Data Programmed");
