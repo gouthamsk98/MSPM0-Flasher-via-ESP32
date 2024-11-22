@@ -65,7 +65,7 @@ export function flash(element: HTMLButtonElement) {
     element.innerHTML = `Flashing...`;
     try {
       await loaderv2.program_data(fileContent);
-      loaderv2.debug("Flashing Done");
+      loaderv2.debug("\nFlashing Done");
     } catch (e) {
       loaderv2.debug("Error Flashing");
     }

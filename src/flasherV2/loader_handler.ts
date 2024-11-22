@@ -26,14 +26,14 @@ export class MSPLoaderV2 extends SerialTransport {
   BSL_TRY_MAX = 10;
   DEFAULT_TIMEOUT = 2000;
   conn_established = false;
-  FLASH_START_ADDRESS = 0x0000;
+  FLASH_START_ADDRESS = 0x00000000;
   FLASH_MAX_BUFFER_SIZE = 0x0000;
   BSL_PW_RESET = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   ];
-
+  MAX_PAYLOAD_DATA_SIZE = 128;
   //******************************* BSL Core MessageFrame Format**************************
   // |Header|Length|RSP|MSG Data|CRC32|
   // |1 Byte|2 Byte|1 Byte|N Byte|4 Byte|
@@ -231,43 +231,59 @@ export class MSPLoaderV2 extends SerialTransport {
   async program_data(hex: string) {
     if (!this.conn_established) await this.establish_conn();
     await this.esp_oled_print("Flashing...", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
-    await this.esp_oled_print(
-      "[=====100%=====]",
-      OLEDPOS.ALIGN_LEFT_MID,
-      0,
-      0,
-      false
-    );
     const raw = await this.readIHex(hex);
-    let address = 0x00000000; //this.FLASH_START_ADDRESS;
-    const cmd: BSLCommand = {
-      type: "ProgramData",
-      start_address: address,
-      data: raw,
-    };
-    let send = await Protocol.getFrameRaw(cmd);
-    await this.send(send);
-    let resRaw = await this.read(this.DEFAULT_TIMEOUT*2, 10);
-    let res = Protocol.getResponse(resRaw, cmd);
-    if (res.response == BSLResponse.BSL_ACK) {
-      this.debug("Data Programmed");
-      await this.esp_oled_print(
-        "Firmware Flashed",
-        OLEDPOS.ALIGN_BOTTOM_LEFT,
-        0,
-        0
-      );
-    } else {
-      this.conn_established = false;
-      await this.esp_oled_print(
-        "Error Flashing",
-        OLEDPOS.ALIGN_BOTTOM_LEFT,
-        0,
-        0
-      );
-      this.debug("Data Program Failed", res.response);
-      throw new Error("Data Program Failed");
+    let ui16DataLength;
+    let ui16BytesToWrite = raw.length;
+    let data_offset = 0;
+    let targetAddress = 0x00000000;
+    const totalBytes = raw.length;
+    while (ui16BytesToWrite > 0) {
+      await this.sleep(10);
+      if (ui16BytesToWrite >= this.MAX_PAYLOAD_DATA_SIZE)
+        ui16DataLength = this.MAX_PAYLOAD_DATA_SIZE;
+      else ui16DataLength = ui16BytesToWrite;
+      ui16BytesToWrite = ui16BytesToWrite - ui16DataLength;
+      const sector = raw.slice(data_offset, data_offset + ui16DataLength);
+      const cmd: BSLCommand = {
+        type: "ProgramData",
+        start_address: targetAddress,
+        data: sector,
+      };
+      const send = await Protocol.getFrameRaw(cmd);
+      await this.send(send);
+      let resRaw = await this.read(this.DEFAULT_TIMEOUT, 10);
+      let res = Protocol.getResponse(resRaw, cmd);
+      if (res.response == BSLResponse.BSL_ACK) {
+        data_offset += ui16DataLength;
+        targetAddress += ui16DataLength;
+
+        // Calculate progress percentage
+        const progress = Math.floor((data_offset / totalBytes) * 100);
+        const progressBar = `[${"=".repeat(progress / 5)}${" ".repeat(
+          20 - progress / 5
+        )}] ${progress}%`;
+        this.debug(
+          `Writing to 0x${targetAddress} ${progressBar}`,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
+      } else {
+        this.conn_established = false;
+        await this.esp_oled_print(
+          "Flash Failed",
+          OLEDPOS.ALIGN_BOTTOM_LEFT,
+          0,
+          0
+        );
+
+        this.debug("Data Program Failed", res.response);
+        throw new Error("Data Program Failed");
+      }
     }
+    await this.esp_oled_print("Flash Done", OLEDPOS.ALIGN_BOTTOM_LEFT, 0, 0);
   }
   async read_memory() {
     if (!this.conn_established) await this.establish_conn();

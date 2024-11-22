@@ -1,7 +1,7 @@
 import { Section, IHexRecord } from "./protocol_handler";
 export class SerialTransport {
   baudrate = 9600;
-  buffer_size = 1024 * 1024*16; //16MB (max can be 16MB)
+  buffer_size = 1024 * 1024 * 16; //16MB (max can be 16MB)
   private traceLog = "";
   private lastTraceTime = Date.now();
   public tracing = true;
@@ -185,7 +185,8 @@ export class SerialTransport {
     e?: unknown,
     console_print = true,
     dom_print = true,
-    dom_element_id = "#console"
+    dom_element_id = "#console",
+    edit_on_same_line = false
   ) {
     if (console_print) console.log(message, e);
 
@@ -194,7 +195,13 @@ export class SerialTransport {
         `${dom_element_id}`
       )!;
       if (consoleTextarea) {
-        consoleTextarea.value += message + "\n";
+        if (edit_on_same_line) {
+          const lines = consoleTextarea.value.split("\n");
+          lines[lines.length - 1] = message;
+          consoleTextarea.value = lines.join("\n");
+        } else {
+          consoleTextarea.value += message + "\n";
+        }
         consoleTextarea.scrollTop = consoleTextarea.scrollHeight;
       }
     }

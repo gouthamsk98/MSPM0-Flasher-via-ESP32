@@ -99,6 +99,8 @@ export class Protocol {
   static INITIAL_SEED = 0xffffffff;
   //offset
   static OFFSET_BYTE = 4;
+  static ADDRS_BYTES = 4;
+  static CMD_BYTES = 1;
 
   static softwareCRC(data: Uint8Array, length: number): Uint8Array {
     let crc = 0xffffffff;
@@ -165,20 +167,20 @@ export class Protocol {
       case "ProgramData": {
         const data = command.data;
         const start_address = [
-          (command.start_address >> 24) & 0xff,
-          (command.start_address >> 16) & 0xff,
-          (command.start_address >> 8) & 0xff,
-          command.start_address & 0xff,
+          command.start_address & 0x000000ff, //LSB
+          (command.start_address & 0x0000ff00) >> 8,
+          (command.start_address & 0x00ff0000) >> 16,
+          (command.start_address & 0xff000000) >> 24, //MSB
         ];
-        const length = data.length + 4 + 1;
+        const length = data.length + this.ADDRS_BYTES + this.CMD_BYTES;
         const crc = this.softwareCRC(
           new Uint8Array([this.PROGRAM_DATA, ...start_address, ...data]),
           length
         );
         return new Uint8Array([
           this.HEADER,
-          length & 0xff,
-          length >> 8,
+          length & 0x00ff, //lsb
+          (length & 0xff00) >> 8, //msb
           this.PROGRAM_DATA,
           ...start_address,
           ...data,
