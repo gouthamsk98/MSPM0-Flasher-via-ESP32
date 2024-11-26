@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SerialTransport = void 0;
-class SerialTransport {
+export class SerialTransport {
     constructor(device) {
         this.device = device;
         this.baudrate = 9600;
@@ -327,4 +324,3 @@ class SerialTransport {
         }
     }
 }
-exports.SerialTransport = SerialTransport;

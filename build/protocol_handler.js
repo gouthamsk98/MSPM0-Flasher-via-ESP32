@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Protocol = exports.BSLResponse = exports.OLEDPOS = void 0;
-var OLEDPOS;
+export var OLEDPOS;
 (function (OLEDPOS) {
     OLEDPOS[OLEDPOS["ALIGN_DEFAULT"] = 0] = "ALIGN_DEFAULT";
     OLEDPOS[OLEDPOS["ALIGN_TOP_LEFT"] = 1] = "ALIGN_TOP_LEFT";
@@ -13,8 +10,8 @@ var OLEDPOS;
     OLEDPOS[OLEDPOS["ALIGN_LEFT_MID"] = 7] = "ALIGN_LEFT_MID";
     OLEDPOS[OLEDPOS["ALIGN_RIGHT_MID"] = 8] = "ALIGN_RIGHT_MID";
     OLEDPOS[OLEDPOS["ALIGN_CENTER"] = 9] = "ALIGN_CENTER";
-})(OLEDPOS || (exports.OLEDPOS = OLEDPOS = {}));
-var BSLResponse;
+})(OLEDPOS || (OLEDPOS = {}));
+export var BSLResponse;
 (function (BSLResponse) {
     BSLResponse[BSLResponse["BSL_ACK"] = 0] = "BSL_ACK";
     BSLResponse[BSLResponse["BSL_ERROR_HEADER_INCORRECT"] = 81] = "BSL_ERROR_HEADER_INCORRECT";
@@ -23,12 +20,12 @@ var BSLResponse;
     BSLResponse[BSLResponse["BSL_ERROR_PACKET_SIZE_TOO_BIG"] = 84] = "BSL_ERROR_PACKET_SIZE_TOO_BIG";
     BSLResponse[BSLResponse["BSL_ERROR_UNKNOWN_ERROR"] = 85] = "BSL_ERROR_UNKNOWN_ERROR";
     BSLResponse[BSLResponse["BSL_ERROR_UNKNOWN_BAUD_RATE"] = 86] = "BSL_ERROR_UNKNOWN_BAUD_RATE";
-})(BSLResponse || (exports.BSLResponse = BSLResponse = {}));
+})(BSLResponse || (BSLResponse = {}));
 //*******************************Frame Format********************************************
 // |Header|Length|BSL Core Data|CRC32|
 // |1 Byte|2 Byte|N Byte|4 Byte|
 //***************************************************************************************
-class Protocol {
+export class Protocol {
     static softwareCRC(data, length) {
         let crc = 0xffffffff;
         for (let i = 0; i < length; i++) {
@@ -189,7 +186,6 @@ class Protocol {
         }
     }
 }
-exports.Protocol = Protocol;
 //Command Codes
 Protocol.HEADER = 0x80;
 Protocol.CONNECTION = 0x12;

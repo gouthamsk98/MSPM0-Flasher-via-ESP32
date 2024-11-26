@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --resolveJsonModule &&node update-version.mjs && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release": "tsc --resolveJsonModule --project tsconfig.build.json"
   },
   "devDependencies": {
     "@types/dom-serial": "^1.0.6",
