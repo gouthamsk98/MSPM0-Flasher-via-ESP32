@@ -1,0 +1,22 @@
+{
+  "name": "msp-flasher",
+  "type": "module",
+  "collaborators": [
+    "goutham <goutham@yudurobotics.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "loader_handler.js",
+    "loader_handler.d.ts",
+    "protocol_handler.d.ts",
+    "protocol_handler.js",
+    "transport_handler.js",
+    "transport_handler.d.ts"
+  ],
+  "main": "loader_handler.js",
+  "types": "loader_handler.d.ts",
+  "devDependencies": {
+    "@types/dom-serial": "^1.0.6",
+    "@types/w3c-web-serial": "^1.0.7"
+  }
+}

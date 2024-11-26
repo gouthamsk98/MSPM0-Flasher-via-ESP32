@@ -1,11 +1,11 @@
 {
   "name": "mspm0viaesp32",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc &&node update-version.mjs && vite build",
+    "build": "tsc --resolveJsonModule &&node update-version.mjs && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {

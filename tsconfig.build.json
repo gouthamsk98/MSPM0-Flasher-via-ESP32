@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "declaration": true,
+    "outDir": "./build",
+    "strict": true
+  },
+  "include": ["src/flasherV2"]
+}
